@@ -8,7 +8,7 @@ import { ensureLauncherPanelExists } from './discord/launcher-panel.js';
 import { handleInteraction } from './handlers/handle-interaction.js';
 import { startReminderJob } from './jobs/reminder-job.js';
 import type { AppContext } from './context.js';
-import { describeError, logger } from './lib/logger.js';
+import { describeError, logFatal, logger } from './lib/logger.js';
 
 async function buildAppContext(
   client: DiscordClient,
@@ -32,6 +32,18 @@ function createDiscordClient(): DiscordClient {
   return new Client({ intents: [GatewayIntentBits.Guilds] });
 }
 
+/**
+ * A gateway connection that stalls produces no error and no ready event: the
+ * process simply sits there, having logged nothing since the database opened,
+ * looking perfectly healthy to the platform. Dying loudly gives the restart
+ * policy something to act on, and gives whoever reads the logs a sentence to
+ * search for.
+ *
+ * Generous on purpose — this is a backstop for a connection that will never
+ * arrive, not a timeout on a slow one.
+ */
+const READY_TIMEOUT_MS = 60_000;
+
 async function startBot(): Promise<void> {
   const environment = loadEnvironment();
   const database = openDatabase(environment.DATABASE_PATH);
@@ -39,7 +51,17 @@ async function startBot(): Promise<void> {
 
   let stopReminderJob: (() => void) | null = null;
 
+  const readyTimeout = setTimeout(() => {
+    logFatal('gave up waiting for the Discord gateway', {
+      waitedMs: READY_TIMEOUT_MS,
+      hint: 'Logged in but never became ready. Check the token in DISCORD_TOKEN and https://discordstatus.com.',
+    });
+    process.exit(1);
+  }, READY_TIMEOUT_MS);
+
   client.once(Events.ClientReady, (readyClient) => {
+    clearTimeout(readyTimeout);
+
     void (async () => {
       try {
         const context = await buildAppContext(readyClient, database, environment);
@@ -62,7 +84,7 @@ async function startBot(): Promise<void> {
       } catch (error: unknown) {
         // A misconfigured channel or missing permission should fail the deploy
         // loudly, not leave a bot connected but unable to do anything.
-        logger.error('startup failed', describeError(error));
+        logFatal('startup failed', describeError(error));
         process.exit(1);
       }
     })();
@@ -87,10 +109,15 @@ async function startBot(): Promise<void> {
   process.on('SIGTERM', () => shutDown('SIGTERM'));
   process.on('SIGINT', () => shutDown('SIGINT'));
 
+  // Bracketing the login means the logs distinguish the three ways this fails:
+  // a token Discord rejects outright, a handshake that never completes, and a
+  // connection that succeeds but cannot see a channel afterwards.
+  logger.info('logging in to Discord');
   await client.login(environment.DISCORD_TOKEN);
+  logger.info('logged in; waiting for the gateway to send ready');
 }
 
 startBot().catch((error: unknown) => {
-  logger.error('failed to start', describeError(error));
+  logFatal('failed to start', describeError(error));
   process.exit(1);
 });
