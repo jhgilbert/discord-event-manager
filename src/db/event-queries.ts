@@ -1,10 +1,15 @@
 import type { EventDatabase } from './database.js';
+import { insertRsvp } from './rsvp-queries.js';
 import type { EventDetails, EventRow } from '../domain/types.js';
 
-export function insertEvent(
-  database: EventDatabase,
-  event: { messageId: string; threadId: string; guildId: string; hostId: string } & EventDetails,
-): void {
+export type NewEvent = EventDetails & {
+  messageId: string;
+  threadId: string;
+  guildId: string;
+  hostId: string;
+};
+
+function insertEvent(database: EventDatabase, event: NewEvent): void {
   database
     .prepare(
       `INSERT INTO events
@@ -13,6 +18,30 @@ export function insertEvent(
          (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity, @createdAt)`,
     )
     .run({ ...event, createdAt: Math.floor(Date.now() / 1000) });
+}
+
+/**
+ * The only way an event is created, because a host is always going to their own
+ * event. Seating them here rather than leaving them to click means the roster
+ * matches reality from the first render, and — since capacity is total headcount
+ * — that the host's own seat is never sold to somebody else.
+ *
+ * One transaction: an event whose host is missing from its own roster would
+ * render as a plausible-looking empty list rather than as an error anyone would
+ * notice.
+ */
+export function insertEventAndSeatHost(database: EventDatabase, event: NewEvent): void {
+  const insertBoth = database.transaction(() => {
+    insertEvent(database, event);
+    insertRsvp(database, {
+      messageId: event.messageId,
+      userId: event.hostId,
+      plusOne: false,
+      status: 'confirmed',
+    });
+  });
+
+  insertBoth();
 }
 
 export function findEventByMessageId(database: EventDatabase, messageId: string): EventRow | null {

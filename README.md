@@ -19,9 +19,11 @@ this file covers how the code is arranged.
   capacity). Dates are free text: "Friday 7pm", "next Tuesday 18:30". The forum
   post is named `Board game night (Friday, Aug 7 at 6:30 PM)`, so the schedule
   is readable from the forum list without opening anything.
+- **Host** — named on the panel in its own field, and RSVPed automatically when
+  the event is created. They can still withdraw with *Can't make it*.
 - **RSVP** — three buttons: *I'm in*, *I'm in +1*, *Can't make it*.
 - **Capacity** — one number, total headcount. A guest takes a seat exactly as a
-  member does.
+  member does, and so does the host.
 - **Waitlist** — strict FIFO, promoted automatically when room appears, with an
   in-thread ping for whoever gets in.
 - **Edit** — `/event edit` inside the post, host only.
@@ -99,6 +101,12 @@ exists, no click seats anyone directly — otherwise a newcomer could take the
 seat the queue is waiting on. A queued member with a guest who is blocking a
 single free seat unblocks by their own choice: they tap *I'm in*, drop the +1,
 and reconcile seats them.
+
+**The host's seat is written with the event row, in one transaction.**
+`insertEventAndSeatHost` is the only way an event is created, so there is no
+path that produces an event whose host is missing from its own roster. It is
+also the one confirmed seat reconcile did not grant, which is harmless:
+reconcile only ever adds people, and it recounts the roster every time.
 
 **State lives in SQLite, never in the rendered message.** The panel is always
 rebuilt from rows. Nothing is ever scraped back out of an embed.

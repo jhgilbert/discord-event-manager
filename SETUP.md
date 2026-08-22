@@ -262,11 +262,14 @@ worker: it makes an outbound gateway connection and listens on nothing.
 
 1. Look at `#events-launcher` — the pinned **New event** panel should be there.
 2. Click **New event**, fill in the form, submit.
-3. A post appears in `#events` tagged `Open`, with the three RSVP buttons.
-4. Click **I'm in** — the roster and spot count update.
+3. A post appears in `#events` tagged `Open`, with the three RSVP buttons. You
+   are already on the **Going** list: hosts are RSVPed to their own event
+   automatically, and take a spot like anyone else.
+4. Click **I'm in** from a second account — the roster and spot count update.
 
-Set capacity to 1 on a test event and click **I'm in +1** from a second account
-to watch the waitlist behave.
+Set capacity to 2 on a test event and click **I'm in +1** from that second
+account to watch the waitlist behave: one spot is yours, so a member bringing a
+guest needs two and waits for them.
 
 ---
 
@@ -279,6 +282,7 @@ to watch the waitlist behave.
 | Cancel an event | `/event cancel`, run **inside that event's post** |
 | Delete an event | `/event delete`, run **inside that event's post** — admins only |
 | RSVP | The buttons on the event post |
+| Drop out as host | **Can't make it** on your own post — the event stays up, your spot is freed |
 
 `edit` and `cancel` are run inside the event's own thread because that is how
 the bot knows which event you mean — no ID to copy. `edit` is host-only;

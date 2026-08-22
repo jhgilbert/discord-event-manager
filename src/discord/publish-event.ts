@@ -1,10 +1,11 @@
 import { ThreadAutoArchiveDuration, type ThreadChannel } from 'discord.js';
 import type { AppContext } from '../context.js';
-import { insertEvent } from '../db/event-queries.js';
-import type { EventDetails, EventRow } from '../domain/types.js';
+import { insertEventAndSeatHost } from '../db/event-queries.js';
+import { summarizeCapacity } from '../domain/capacity.js';
+import type { EventDetails, EventRow, RsvpRow } from '../domain/types.js';
 import { renderEventPanel } from './event-panel.js';
 import { buildEventThreadName } from './event-thread-name.js';
-import { resolveStateTagId } from './forum-tags.js';
+import { chooseStateTagName, resolveStateTagId } from './forum-tags.js';
 
 /**
  * The panel has to be rendered before the post exists, because it *is* the
@@ -34,6 +35,22 @@ function buildUnpublishedEventRow(
   };
 }
 
+/**
+ * The host's seat as the panel needs to see it, before the row it mirrors can
+ * exist — the RSVP is keyed by the message ID, and the message is the thing
+ * being created. Rendering reads neither ID nor timestamp; the stored row is
+ * written by insertEventAndSeatHost, so the two cannot drift.
+ */
+function buildHostRsvpRow(hostId: string): RsvpRow {
+  return {
+    message_id: '',
+    user_id: hostId,
+    plus_one: 0,
+    status: 'confirmed',
+    created_at: 0,
+  };
+}
+
 export interface PublishedEvent {
   messageId: string;
   thread: ThreadChannel;
@@ -50,20 +67,26 @@ export async function publishNewEvent(
   guildId: string,
   details: EventDetails,
 ): Promise<PublishedEvent> {
-  const openTagId = resolveStateTagId(context.forum, 'Open');
+  const event = buildUnpublishedEventRow(hostId, guildId, details);
+  const hostRsvp = buildHostRsvpRow(hostId);
+
+  // A capacity of one is full the moment the host takes their seat, so the
+  // opening tag is chosen rather than assumed.
+  const { isFull } = summarizeCapacity(event, [hostRsvp]);
+  const stateTagId = resolveStateTagId(context.forum, chooseStateTagName({ cancelled: 0, isFull }));
 
   const thread = await context.forum.threads.create({
     name: buildEventThreadName(details.title, details.startsAt, context.environment.TZ),
     // One week is the maximum; it keeps posts editable for the whole run-up to
     // an event without the handler having to unarchive on every click.
     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
-    appliedTags: openTagId === null ? [] : [openTagId],
-    message: renderEventPanel(buildUnpublishedEventRow(hostId, guildId, details), [], []),
+    appliedTags: stateTagId === null ? [] : [stateTagId],
+    message: renderEventPanel(event, [hostRsvp], []),
   });
 
   // For forum posts the starter message ID equals the thread ID, which is why
   // one column can serve as the primary key for both.
-  insertEvent(context.database, {
+  insertEventAndSeatHost(context.database, {
     messageId: thread.id,
     threadId: thread.id,
     guildId,

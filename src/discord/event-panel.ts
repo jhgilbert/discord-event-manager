@@ -62,6 +62,15 @@ function describeSpots(event: EventRow, confirmed: RsvpRow[]): string {
   return isOverSubscribed ? `${line} — over capacity` : line;
 }
 
+/**
+ * A mention rather than a name: it renders as whatever nickname the viewer sees,
+ * survives a rename, and is clickable. Mentions inside an embed never notify
+ * anyone, so this cannot ping the host every time the panel re-renders.
+ */
+function buildHostField(event: EventRow): APIEmbedField {
+  return { name: 'Host', value: `<@${event.host_id}>` };
+}
+
 function buildWhenField(event: EventRow): APIEmbedField {
   // `<t:…>` renders in each viewer's own timezone, so the bot never has to
   // guess where anyone is.
@@ -91,6 +100,7 @@ function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow
       ? joinLinesWithinBudget(waiting.map(formatWaitlistLine), FIELD_VALUE_MAX)
       : '';
 
+  const hostField = buildHostField(event);
   const whenField = buildWhenField(event);
   const locationValue = event.location ?? '';
 
@@ -101,6 +111,7 @@ function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow
           computeGoingFieldBudget(
             event.title.length +
               description.length +
+              hostField.value.length +
               whenField.value.length +
               locationValue.length +
               spotsValue.length +
@@ -109,7 +120,7 @@ function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow
         )
       : '_Nobody yet — be the first._';
 
-  const fields: APIEmbedField[] = [whenField];
+  const fields: APIEmbedField[] = [hostField, whenField];
 
   // Omitted entirely when the host left it blank; an empty "Where" field reads
   // like missing information rather than a deliberate choice.

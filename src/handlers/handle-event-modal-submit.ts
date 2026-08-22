@@ -79,8 +79,13 @@ async function createEventFromForm(
     capacity: details.capacity,
   });
 
+  // Said out loud because it costs the host a seat: they should find out here
+  // rather than by counting the roster and wondering who the extra person is.
   await interaction.editReply({
-    content: `Posted: ${published.thread.url}`,
+    content: [
+      `Posted: ${published.thread.url}`,
+      "You're on the list as the host, taking one of the spots. Tap **Can't make it** on the post if you need to give it up.",
+    ].join('\n'),
     components: [],
   });
 }
