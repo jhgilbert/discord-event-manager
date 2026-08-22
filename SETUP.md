@@ -285,9 +285,24 @@ guest needs two and waits for them.
 | Drop out as host | **Can't make it** on your own post — the event stays up, your spot is freed |
 
 `edit` and `cancel` are run inside the event's own thread because that is how
-the bot knows which event you mean — no ID to copy. `edit` is host-only;
-`cancel` is host or anyone with **Manage Server**, so an admin can clean up
-after a host who has left.
+the bot knows which event you mean — no ID to copy.
+
+Who can do what:
+
+| | Host | **Manage Server** | **Administrator** | Everyone else |
+|---|---|---|---|---|
+| Edit | ✅ | ✅ | ✅ | — |
+| Cancel | ✅ | ✅ | ✅ | — |
+| Delete | — | — | ✅ | — |
+
+Administrators hold every permission in Discord, so they pass the Manage Server
+checks too. A server manager can fix or call off an event whose host has gone
+quiet or left, but only an administrator can erase one — cancelling is
+recoverable and tells everyone, deleting is neither.
+
+**Editing someone else's event is silent.** Nobody is notified, including the
+host. It is recorded in the logs as `event updated` with both `editedBy` and
+`hostId`, so it can be traced after the fact.
 
 Cancelling notifies everyone who RSVPed (confirmed *and* waitlisted — a queued
 member is still holding the evening open), applies the `Canceled` tag, and

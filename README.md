@@ -26,7 +26,8 @@ this file covers how the code is arranged.
   member does, and so does the host.
 - **Waitlist** — strict FIFO, promoted automatically when room appears, with an
   in-thread ping for whoever gets in.
-- **Edit** — `/event edit` inside the post, host only.
+- **Edit** — `/event edit` inside the post; host, or anyone with **Manage
+  Server**.
 - **Cancel** — `/event cancel` inside the post; notifies everyone, tags the post
   `Canceled`, locks the thread.
 - **Delete** — `/event delete` inside the post, **server administrators only**.

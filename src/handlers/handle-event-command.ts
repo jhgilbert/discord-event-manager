@@ -13,6 +13,7 @@ import { buildConfirmDeleteButtonId } from '../discord/custom-ids.js';
 import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
 import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
+import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { announceEventCancelled } from '../discord/announcements.js';
 import { fetchEventThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
@@ -28,19 +29,6 @@ function findEventForInteractionChannel(
   interaction: ChatInputCommandInteraction,
 ): EventRow | null {
   return findEventByMessageId(context.database, interaction.channelId);
-}
-
-function isHostOrServerManager(
-  interaction: ChatInputCommandInteraction,
-  event: EventRow,
-): boolean {
-  if (event.host_id === interaction.user.id) {
-    return true;
-  }
-
-  // A server manager can clean up after a host who left; ordinary members
-  // cannot touch someone else's event.
-  return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false;
 }
 
 /**
@@ -83,8 +71,8 @@ async function handleEditSubcommand(
     return;
   }
 
-  if (event.host_id !== interaction.user.id) {
-    await replyEphemerally(interaction, 'Only the host can edit this event.');
+  if (!isHostOrServerManager(interaction, event)) {
+    await replyEphemerally(interaction, 'Only the host or a server manager can edit this event.');
     return;
   }
 

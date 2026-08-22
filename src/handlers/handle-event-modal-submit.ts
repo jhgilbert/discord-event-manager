@@ -20,6 +20,7 @@ import {
   type EventModalTarget,
 } from '../discord/custom-ids.js';
 import { readEventFormFromModal } from '../discord/event-modal.js';
+import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { buildEventThreadName } from '../discord/event-thread-name.js';
 import { publishNewEvent } from '../discord/publish-event.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
@@ -136,8 +137,15 @@ async function applyEventEdit(
       return { message: 'That event no longer exists.', promotedUserIds: [], threadId: null };
     }
 
-    if (event.host_id !== interaction.user.id) {
-      return { message: 'Only the host can edit this event.', promotedUserIds: [], threadId: null };
+    // Re-checked at submit rather than trusted from the command that opened the
+    // modal: a form can sit open on screen for a long while, and a permission
+    // can be taken away in the meantime.
+    if (!isHostOrServerManager(interaction, event)) {
+      return {
+        message: 'Only the host or a server manager can edit this event.',
+        promotedUserIds: [],
+        threadId: null,
+      };
     }
 
     if (event.cancelled) {
@@ -159,7 +167,23 @@ async function applyEventEdit(
     await renameThreadForUpdatedEvent(context, event.thread_id, event, details);
     await refreshEventPanel(context, messageId);
 
-    return { message: 'Event updated.', promotedUserIds, threadId: event.thread_id };
+    // `editedBy` and `hostId` are both recorded because they are no longer
+    // always the same person: a host who finds their event moved should be able
+    // to be told who moved it.
+    logger.info('event updated', {
+      messageId,
+      editedBy: interaction.user.id,
+      hostId: event.host_id,
+      startsAt: details.startsAt,
+      capacity: details.capacity,
+    });
+
+    const message =
+      event.host_id === interaction.user.id
+        ? 'Event updated.'
+        : "Event updated. You edited someone else's event — the host has not been notified.";
+
+    return { message, promotedUserIds, threadId: event.thread_id };
   });
 
   await interaction.editReply({ content: outcome.message, components: [] });
