@@ -11,6 +11,12 @@ import {
   findEventByMessageId,
   updateEventDetails,
 } from '../db/event-queries.js';
+import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
+import {
+  changesAffectAttendeePlans,
+  listEventChanges,
+  type EventFieldName,
+} from '../domain/event-changes.js';
 import { parseEventForm, type RawEventForm } from '../domain/event-form.js';
 import { reconcileEvent } from '../domain/reconcile.js';
 import type { EventDetails } from '../domain/types.js';
@@ -24,7 +30,11 @@ import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { buildEventThreadName } from '../discord/event-thread-name.js';
 import { publishNewEvent } from '../discord/publish-event.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
-import { announcePromotedFromWaitlist } from '../discord/announcements.js';
+import { buildEventEditNotice } from '../discord/event-edit-notice.js';
+import {
+  announcePromotedFromWaitlist,
+  postNoticeInEventThread,
+} from '../discord/announcements.js';
 import { saveDraft } from '../lib/draft-store.js';
 import { withMessageLock } from '../lib/message-lock.js';
 import { describeError, logger } from '../lib/logger.js';
@@ -124,17 +134,69 @@ async function renameThreadForUpdatedEvent(
   });
 }
 
+/**
+ * Everyone with a stake in the event, queued as well as seated, minus whoever
+ * made the change — they know, they just did it, and being pinged by your own
+ * edit is the kind of thing that gets a thread muted.
+ */
+function listAttendeesToNotify(
+  context: AppContext,
+  messageId: string,
+  editorId: string,
+): string[] {
+  return [
+    ...listConfirmedInJoinOrder(context.database, messageId),
+    ...listWaitlistInJoinOrder(context.database, messageId),
+  ]
+    .map((rsvp) => rsvp.user_id)
+    .filter((userId) => userId !== editorId);
+}
+
+/**
+ * An edit is no longer a private act — the change list is posted where everyone
+ * can read it — so the confirmation says what the thread was told, and whether
+ * anyone was pinged about it.
+ */
+function describeEditOutcome(changes: EventFieldName[], mentionedCount: number): string {
+  const changeCount = changes.length === 1 ? '1 change' : `${changes.length} changes`;
+  const summary = `Event updated — ${changeCount} posted in the thread.`;
+
+  if (mentionedCount === 0) {
+    return `${summary} Nobody was pinged.`;
+  }
+
+  const people = mentionedCount === 1 ? '1 person was' : `${mentionedCount} people were`;
+  return `${summary} ${people} notified, since the time or place moved.`;
+}
+
+interface EditNotice {
+  buildContent: (mentions: string) => string;
+  mentionUserIds: string[];
+}
+
+interface EditOutcome {
+  message: string;
+  promotedUserIds: string[];
+  threadId: string | null;
+  notice: EditNotice | null;
+}
+
 async function applyEventEdit(
   context: AppContext,
   interaction: ModalSubmitInteraction,
   messageId: string,
   details: EventDetails,
 ): Promise<void> {
-  const outcome = await withMessageLock(messageId, async () => {
+  const outcome = await withMessageLock(messageId, async (): Promise<EditOutcome> => {
     const event = findEventByMessageId(context.database, messageId);
 
     if (event === null) {
-      return { message: 'That event no longer exists.', promotedUserIds: [], threadId: null };
+      return {
+        message: 'That event no longer exists.',
+        promotedUserIds: [],
+        threadId: null,
+        notice: null,
+      };
     }
 
     // Re-checked at submit rather than trusted from the command that opened the
@@ -145,12 +207,21 @@ async function applyEventEdit(
         message: 'Only the host or a server manager can edit this event.',
         promotedUserIds: [],
         threadId: null,
+        notice: null,
       };
     }
 
     if (event.cancelled) {
-      return { message: 'This event was canceled and can no longer be edited.', promotedUserIds: [], threadId: null };
+      return {
+        message: 'This event was canceled and can no longer be edited.',
+        promotedUserIds: [],
+        threadId: null,
+        notice: null,
+      };
     }
+
+    // Read before the update overwrites the values it compares against.
+    const changes = listEventChanges(event, details);
 
     updateEventDetails(context.database, messageId, details);
 
@@ -174,23 +245,53 @@ async function applyEventEdit(
       messageId,
       editedBy: interaction.user.id,
       hostId: event.host_id,
-      startsAt: details.startsAt,
-      capacity: details.capacity,
+      changes,
     });
 
-    const message =
-      event.host_id === interaction.user.id
-        ? 'Event updated.'
-        : "Event updated. You edited someone else's event — the host has not been notified.";
+    // A submit that changed nothing — reopening the form and closing it, or
+    // retyping the same date — is not news, and the thread should not say it is.
+    if (changes.length === 0) {
+      return {
+        message: 'Nothing changed.',
+        promotedUserIds,
+        threadId: event.thread_id,
+        notice: null,
+      };
+    }
 
-    return { message, promotedUserIds, threadId: event.thread_id };
+    const mentionUserIds = changesAffectAttendeePlans(changes)
+      ? listAttendeesToNotify(context, messageId, interaction.user.id)
+      : [];
+
+    return {
+      message: describeEditOutcome(changes, mentionUserIds.length),
+      promotedUserIds,
+      threadId: event.thread_id,
+      notice: {
+        buildContent: buildEventEditNotice(interaction.user.id, changes, event, details),
+        mentionUserIds,
+      },
+    };
   });
 
   await interaction.editReply({ content: outcome.message, components: [] });
 
-  if (outcome.threadId !== null) {
-    await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promotedUserIds);
+  if (outcome.threadId === null) {
+    return;
   }
+
+  // The change first, then its consequences: a member promoted by a capacity
+  // increase should read the increase above the promotion, not below it.
+  if (outcome.notice !== null) {
+    await postNoticeInEventThread(
+      context,
+      outcome.threadId,
+      outcome.notice.buildContent,
+      outcome.notice.mentionUserIds,
+    );
+  }
+
+  await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promotedUserIds);
 }
 
 export async function handleEventModalSubmit(

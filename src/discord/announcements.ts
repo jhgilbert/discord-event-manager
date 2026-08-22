@@ -18,16 +18,12 @@ function chunkUserIds(userIds: string[]): string[][] {
  * has them closed, with no reliable way to detect it — and posting in-thread
  * also lets the host see that the notification happened.
  */
-export async function announceInEventThread(
+async function sendToEventThread(
   context: AppContext,
   threadId: string,
   buildContent: (mentions: string) => string,
-  userIdsToMention: string[],
+  mentionChunks: string[][],
 ): Promise<void> {
-  if (userIdsToMention.length === 0) {
-    return;
-  }
-
   const thread = await fetchEventThread(context, threadId);
   if (thread === null) {
     logger.warn('cannot announce: thread is gone', { threadId });
@@ -37,7 +33,7 @@ export async function announceInEventThread(
   try {
     await ensureThreadIsEditable(thread);
 
-    for (const chunk of chunkUserIds(userIdsToMention)) {
+    for (const chunk of mentionChunks) {
       await thread.send({
         content: buildContent(chunk.map((userId) => `<@${userId}>`).join(' ')),
         // Explicit allow-list so an event title containing "@everyone" can
@@ -48,6 +44,40 @@ export async function announceInEventThread(
   } catch (error: unknown) {
     logger.error('failed to post thread announcement', { threadId, ...describeError(error) });
   }
+}
+
+/**
+ * Nobody to tell means nothing to say: a promotion, a cancellation and a
+ * reminder are all notifications first, and an empty one is just noise in the
+ * thread.
+ */
+export async function announceInEventThread(
+  context: AppContext,
+  threadId: string,
+  buildContent: (mentions: string) => string,
+  userIdsToMention: string[],
+): Promise<void> {
+  if (userIdsToMention.length === 0) {
+    return;
+  }
+
+  await sendToEventThread(context, threadId, buildContent, chunkUserIds(userIdsToMention));
+}
+
+/**
+ * Posts even when there is nobody to mention. An edit notice is a record of what
+ * changed before it is a notification, so it belongs in the thread of an event
+ * that nobody has RSVPed to yet — and it is what a member who joins later reads
+ * to see the event's history.
+ */
+export async function postNoticeInEventThread(
+  context: AppContext,
+  threadId: string,
+  buildContent: (mentions: string) => string,
+  userIdsToMention: string[],
+): Promise<void> {
+  const chunks = userIdsToMention.length === 0 ? [[]] : chunkUserIds(userIdsToMention);
+  await sendToEventThread(context, threadId, buildContent, chunks);
 }
 
 export async function announcePromotedFromWaitlist(

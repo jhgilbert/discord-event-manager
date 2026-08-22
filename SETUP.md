@@ -300,9 +300,22 @@ checks too. A server manager can fix or call off an event whose host has gone
 quiet or left, but only an administrator can erase one — cancelling is
 recoverable and tells everyone, deleting is neither.
 
-**Editing someone else's event is silent.** Nobody is notified, including the
-host. It is recorded in the logs as `event updated` with both `editedBy` and
-`hostId`, so it can be traced after the fact.
+**Every edit posts what changed, in the event's own thread** — including the
+host's own edits, and including a change made by an admin. The notice names who
+made it and lists the fields, old value then new:
+
+> **@jen** updated this event:
+> · **When** — Friday, August 7, 2026 6:30 PM → **Saturday, August 8, 2026 7:00 PM**
+> · **Where** — My place → **The park**
+
+**Whether anyone is pinged depends on what changed.** A new time or a new place
+mentions everyone RSVPed, seated and waitlisted, because it might stop them
+coming. A fixed typo, a reworded description or a capacity change posts the
+notice without mentioning anyone — the record is there to read, but nobody's
+phone lights up. Whoever made the edit is never pinged by it.
+
+Edits are also logged as `event updated` with `editedBy`, `hostId` and the list
+of changed fields.
 
 Cancelling notifies everyone who RSVPed (confirmed *and* waitlisted — a queued
 member is still holding the evening open), applies the `Canceled` tag, and

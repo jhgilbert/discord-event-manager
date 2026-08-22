@@ -27,7 +27,8 @@ this file covers how the code is arranged.
 - **Waitlist** — strict FIFO, promoted automatically when room appears, with an
   in-thread ping for whoever gets in.
 - **Edit** — `/event edit` inside the post; host, or anyone with **Manage
-  Server**.
+  Server**. Every edit posts a change list in the thread, and pings attendees
+  when the time or place moved.
 - **Cancel** — `/event cancel` inside the post; notifies everyone, tags the post
   `Canceled`, locks the thread.
 - **Delete** — `/event delete` inside the post, **server administrators only**.
@@ -62,6 +63,7 @@ src/
     rsvp-decision.ts   what a click means, given current state
     reconcile.ts       the promotion loop
     event-form.ts      Zod + chrono over the five modal fields
+    event-changes.ts   what an edit changed, and whether to ping about it
   discord/             rendering and API calls
     custom-ids.ts      versioned button and modal IDs
     event-modal.ts     the create/edit form
@@ -70,6 +72,8 @@ src/
     refresh-event-panel.ts  re-render, unarchive, debounce
     forum-tags.ts      Open / Full / Canceled
     announcements.ts   in-thread pings
+    event-edit-notice.ts   the "what changed" message
+    event-permissions.ts   who may edit or cancel
     launcher-panel.ts  the pinned "New event" message
     channels.ts        startup channel resolution
   handlers/            one file per interaction, plus a router
