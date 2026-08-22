@@ -25,8 +25,9 @@ this file covers how the code is arranged.
 - **Edit** — `/event edit` inside the post, host only.
 - **Cancel** — `/event cancel` inside the post; notifies everyone, tags the post
   `Cancelled`, locks the thread.
-- **Reminders** — posted in-thread to confirmed attendees, by default an hour
-  before the start.
+- **Reminders** — posted in-thread to confirmed attendees, `REMINDER_LEAD_MINUTES`
+  before the start (1440 = the day before). Events posted at shorter notice than
+  the lead skip the reminder: the post is the notice.
 
 ## Stack
 
@@ -131,6 +132,10 @@ npm start           # node dist/index.js
 - **Reminders are at-most-once.** An event is marked as reminded *before* the
   message is sent, so a crash mid-send costs one missed reminder rather than a
   duplicate ping to everyone attending.
+- **The reminder lead is read at sweep time, not stored per event.** Changing
+  `REMINDER_LEAD_MINUTES` re-times every event that has not been reminded yet,
+  which is why `events.created_at` exists: it is the only way to tell, later,
+  whether an event was ever eligible for a reminder in the first place.
 - **Logs are single-line JSON**, which is what Railway's log viewer indexes.
 
 ## Not built

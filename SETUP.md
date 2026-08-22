@@ -57,6 +57,10 @@ Under **Bot Permissions**, tick exactly these:
 
 Copy the generated URL at the bottom, open it, pick your server, and authorise.
 
+**These are a ceiling, not a guarantee.** They apply server-wide, but any
+channel that overrides them wins — including for the bot. If either channel is
+private, the bot needs an explicit allow on that channel as well. See step 1.5.
+
 > **Shortcut:** the permission integer for that exact set is
 > `2252126231284736`. You can paste it straight into the URL:
 > `https://discord.com/api/oauth2/authorize?client_id=YOUR_APP_ID&scope=bot%20applications.commands&permissions=2252126231284736`
@@ -77,7 +81,9 @@ there are two channels.
 **Who can create events is decided entirely by this channel's permissions.**
 The bot performs no role check of its own. If you want events limited to
 organisers, deny **View Channel** to `@everyone` here and allow it for the
-organiser role. You can change this at any time without redeploying.
+organiser role. You can change this at any time without redeploying. If you do
+make it private, the bot needs a **View Channel** allow of its own here too —
+same reasoning as the forum in step 1.5.
 
 Right-click the channel → **Copy Channel ID**. This is `LAUNCHER_CHANNEL_ID`.
 
@@ -107,6 +113,33 @@ everything else still works.
 Members can still reply inside threads and use the RSVP buttons. Only the bot
 opens posts, which is what makes the forum read as an official list rather than
 a free-for-all.
+
+**If the forum is private, add the bot explicitly.** A private channel denies
+**View Channel** to `@everyone`, and the bot's role is not exempt from that — a
+channel overwrite beats the server-wide permissions from the invite URL. Without
+an allow here the bot cannot see the forum at all, and it exits at startup
+rather than running half-broken.
+
+In **Permissions → Roles/Members**, add your bot's role (Discord creates one
+automatically, named after the application) and allow:
+
+| Permission | Without it |
+|---|---|
+| View Channel | Startup fails — nothing works |
+| Create Posts | Events can't be published |
+| Send Messages in Posts | No promotion, reminder or cancellation notices |
+| Embed Links | The event panel renders empty |
+| Read Message History | The panel can't be re-read, so RSVPs don't update |
+| Manage Threads | No state tags, no unarchive-before-edit, no lock on cancel |
+
+You can add the bot user directly instead of its role; both work. Adding the
+role is easier to audit later.
+
+**Keep `#events-launcher` no wider than `#events`.** Anyone who can see the
+launcher can create an event, and the bot replies with a link to the new post.
+If someone can reach the launcher but not the forum, they get a link that leads
+nowhere and an event they can't manage. Restricting the forum is a good reason
+to restrict the launcher to the same roles — or a subset.
 
 Right-click the channel → **Copy Channel ID**. This is
 `EVENTS_FORUM_CHANNEL_ID`.
@@ -175,8 +208,8 @@ DISCORD_GUILD_ID=000000000000000000
 LAUNCHER_CHANNEL_ID=000000000000000000
 EVENTS_FORUM_CHANNEL_ID=000000000000000000
 DATABASE_PATH=/data/events.db
-TZ=Europe/London
-REMINDER_LEAD_MINUTES=60
+TZ=America/Chicago
+REMINDER_LEAD_MINUTES=1440
 ```
 
 Notes:
@@ -186,10 +219,25 @@ Notes:
   database that quietly disappears on redeploy.
 - **`TZ` decides what "Friday 7pm" means.** Hosts type dates as free text and
   the parser resolves them against the process clock, which defaults to UTC.
-  Set this to your server's home timezone using an [IANA name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
-  (`Europe/London`, `America/New_York`, …). Attendees are unaffected either
-  way — times render in each viewer's own local zone.
-- `REMINDER_LEAD_MINUTES` is how far ahead the in-thread reminder is posted.
+  Set this to the zone your hosts think in when they type, using an
+  [IANA name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) —
+  `America/Chicago` for US Central, `America/New_York`, `Europe/London`, and so
+  on. Use the region name, never an abbreviation like `CST` or a fixed offset:
+  the IANA zone carries the daylight-saving rules with it, so an event typed in
+  November lands correctly without anyone adjusting anything twice a year.
+  Attendees are unaffected either way — times render in each viewer's own local
+  zone, so someone travelling sees their current local time, not Central.
+- **`REMINDER_LEAD_MINUTES` is how far ahead the in-thread reminder is posted.**
+  `1440` is the day before; `60` is an hour before. Anything from 1 minute to
+  10080 (a week) is accepted, and changing it takes effect on the next deploy
+  with no migration — the value is read at sweep time, not stored per event.
+  Confirmed attendees are pinged; the waitlist is not.
+
+  Events created *inside* the window — posted for tonight when the lead is a
+  day — get no reminder, deliberately. The post itself is the notice, and a
+  reminder minutes after the announcement would reach only whoever RSVPed in
+  the first sixty seconds. The log says `skipping reminder for short-notice
+  event` when this happens.
 
 ### 2.5 Deploy
 
@@ -200,7 +248,7 @@ View Logs**. A healthy start looks like:
 {"level":"info","message":"database ready","databasePath":"/data/events.db"}
 {"level":"info","message":"registered guild commands","guildId":"..."}
 {"level":"info","message":"posted launcher panel","messageId":"..."}
-{"level":"info","message":"bot ready","user":"Events#1234","timeZone":"Europe/London"}
+{"level":"info","message":"bot ready","user":"Events#1234","timeZone":"America/Chicago"}
 ```
 
 Ignore any Railway prompt about exposing a port or adding a domain. This is a
@@ -240,9 +288,25 @@ locks the thread.
 
 ## Troubleshooting
 
+**The build fails with `EBUSY: resource busy or locked, rmdir
+'/app/node_modules/.cache'`.** Something is running `npm ci` during the *build*
+phase. Nixpacks already installs dependencies in its own earlier phase, and it
+mounts a build cache at `node_modules/.cache`; `npm ci` starts by deleting
+`node_modules` wholesale, and it cannot delete a live mount point. The build
+command in `railway.json` is therefore `npm run build` alone — no install step.
+If you add one back, use `npm install`, which updates in place rather than
+wiping the directory first.
+
 **The bot is online but the launcher panel never appeared.** It cannot see or
 post in `#events-launcher`. Check the bot's role has View Channels and Send
 Messages there. The logs name the failure.
+
+**The bot exits at startup saying a channel was not found, or the log shows
+`Missing Access` / `50001`.** Almost always a private channel the bot has not
+been added to, rather than a wrong ID — from the bot's side the two are
+indistinguishable, because Discord hides channels it can't see instead of
+refusing them. Add the bot's role to that channel's permissions (step 1.5). If
+the channel isn't private, re-copy the ID with Developer Mode on.
 
 **Startup log says `could not pin the launcher panel`.** The bot lacks Pin
 Messages. Harmless — the panel works unpinned. Grant the permission and restart

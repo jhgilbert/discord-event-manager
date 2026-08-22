@@ -20,7 +20,14 @@ const EnvironmentSchema = z.object({
   EVENTS_FORUM_CHANNEL_ID: DiscordIdSchema,
   DATABASE_PATH: z.string().trim().min(1).default('/data/events.db'),
   TZ: z.string().trim().min(1).default('UTC'),
-  REMINDER_LEAD_MINUTES: z.coerce.number().int().min(1).max(1440).default(60),
+  // Up to a week. 1440 is the day before, which is the common choice; the cap
+  // exists only to catch someone typing minutes when they meant something else.
+  REMINDER_LEAD_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10_080, 'must be between 1 minute and 10080 (7 days)')
+    .default(60),
 });
 
 export type Environment = z.infer<typeof EnvironmentSchema>;

@@ -20,6 +20,7 @@ export interface EventRow {
   capacity: number;
   cancelled: number;
   reminder_sent: number;
+  created_at: number;
 }
 
 export interface RsvpRow {

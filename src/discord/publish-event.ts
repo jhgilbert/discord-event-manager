@@ -27,6 +27,9 @@ function buildUnpublishedEventRow(
     capacity: details.capacity,
     cancelled: 0,
     reminder_sent: 0,
+    // Rendering never reads this; the row that gets stored is stamped by
+    // insertEvent, so the two cannot drift.
+    created_at: 0,
   };
 }
 

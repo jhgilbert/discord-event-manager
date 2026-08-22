@@ -77,6 +77,12 @@ export async function announceEventCancelled(
   );
 }
 
+/**
+ * The absolute time is `:F` (full date *and* time) rather than `:t`, because the
+ * lead is configurable: at a day's notice "starts in 1 day (7:00 pm)" leaves the
+ * reader working out which day is meant. `:F` reads correctly at any lead, and
+ * still renders in each viewer's own timezone.
+ */
 export async function announceEventReminder(
   context: AppContext,
   threadId: string,
@@ -87,7 +93,7 @@ export async function announceEventReminder(
   await announceInEventThread(
     context,
     threadId,
-    (mentions) => `${mentions} — **${eventTitle}** starts <t:${startsAt}:R> (<t:${startsAt}:t>).`,
+    (mentions) => `${mentions} — **${eventTitle}** starts <t:${startsAt}:R>: <t:${startsAt}:F>.`,
     attendeeUserIds,
   );
 }

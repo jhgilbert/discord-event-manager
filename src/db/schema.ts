@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS events (
   starts_at     INTEGER NOT NULL,   -- unix seconds
   capacity      INTEGER NOT NULL,
   cancelled     INTEGER NOT NULL DEFAULT 0,
-  reminder_sent INTEGER NOT NULL DEFAULT 0
+  reminder_sent INTEGER NOT NULL DEFAULT 0,
+  created_at    INTEGER NOT NULL DEFAULT 0   -- unix seconds; 0 means "unknown"
 );
 
 CREATE TABLE IF NOT EXISTS rsvps (

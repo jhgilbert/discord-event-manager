@@ -8,11 +8,11 @@ export function insertEvent(
   database
     .prepare(
       `INSERT INTO events
-         (message_id, thread_id, guild_id, host_id, title, description, location, starts_at, capacity)
+         (message_id, thread_id, guild_id, host_id, title, description, location, starts_at, capacity, created_at)
        VALUES
-         (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity)`,
+         (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity, @createdAt)`,
     )
-    .run(event);
+    .run({ ...event, createdAt: Math.floor(Date.now() / 1000) });
 }
 
 export function findEventByMessageId(database: EventDatabase, messageId: string): EventRow | null {

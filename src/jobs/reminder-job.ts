@@ -5,10 +5,25 @@ import { announceEventReminder } from '../discord/announcements.js';
 import { describeError, logger } from '../lib/logger.js';
 
 /**
- * A minute of granularity is plenty for an hour's notice, and the query is one
- * index scan, so this costs nothing to run forever.
+ * A minute of granularity is plenty for a reminder measured in hours, and the
+ * query is one index scan, so this costs nothing to run forever.
  */
 const SWEEP_INTERVAL_MS = 60_000;
+
+/**
+ * An event posted for tonight, with the reminder set to the day before, was
+ * already past its reminder point when it was created. Firing anyway would ping
+ * whoever happened to have RSVPed in the first sixty seconds and nobody else —
+ * so treat short notice as its own notice, the way a calendar does.
+ *
+ * Rows written before `created_at` existed hold 0 and are never short notice.
+ */
+function wasCreatedInsideReminderWindow(
+  event: { starts_at: number; created_at: number },
+  leadMinutes: number,
+): boolean {
+  return event.created_at > 0 && event.created_at >= event.starts_at - leadMinutes * 60;
+}
 
 async function sendReminderFor(
   context: AppContext,
@@ -43,6 +58,11 @@ export async function runReminderSweep(context: AppContext): Promise<void> {
     // of events that are already over.
     if (event.starts_at < nowInSeconds) {
       logger.info('skipping stale reminder', { messageId: event.message_id });
+      continue;
+    }
+
+    if (wasCreatedInsideReminderWindow(event, context.environment.REMINDER_LEAD_MINUTES)) {
+      logger.info('skipping reminder for short-notice event', { messageId: event.message_id });
       continue;
     }
 
