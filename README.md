@@ -16,7 +16,9 @@ this file covers how the code is arranged.
 ## What it does
 
 - **Create** — a five-field modal (title, date/time, description, location,
-  capacity). Dates are free text: "Friday 7pm", "next Tuesday 18:30".
+  capacity). Dates are free text: "Friday 7pm", "next Tuesday 18:30". The forum
+  post is named `Board game night (Friday, Aug 7 at 6:30 PM)`, so the schedule
+  is readable from the forum list without opening anything.
 - **RSVP** — three buttons: *I'm in*, *I'm in +1*, *Can't make it*.
 - **Capacity** — one number, total headcount. A guest takes a seat exactly as a
   member does.
@@ -127,8 +129,11 @@ npm start           # node dist/index.js
   connection would double-handle every click.
 - **The database must live on the mounted volume.** See SETUP.md step 2.3.
 - **`TZ` is load-bearing.** It decides what "Friday 7pm" means when a host types
-  it. Rendering is unaffected — `<t:unix:F>` shows each viewer their own local
-  time.
+  it, and it is the zone the date in a post's *name* is written in — a channel
+  name is plain text, so `<t:unix:F>` cannot be used there. Everything inside a
+  post does use that markup, and shows each viewer their own local time. This
+  assumes a single-timezone group; a distributed one would want the date out of
+  the name.
 - **Reminders are at-most-once.** An event is marked as reminded *before* the
   message is sent, so a crash mid-send costs one missed reminder rather than a
   duplicate ping to everyone attending.

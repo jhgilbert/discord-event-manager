@@ -20,6 +20,7 @@ import {
   type EventModalTarget,
 } from '../discord/custom-ids.js';
 import { readEventFormFromModal } from '../discord/event-modal.js';
+import { buildEventThreadName } from '../discord/event-thread-name.js';
 import { publishNewEvent } from '../discord/publish-event.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { announcePromotedFromWaitlist } from '../discord/announcements.js';
@@ -85,16 +86,25 @@ async function createEventFromForm(
 }
 
 /**
- * Renaming on a title change is fine — thread renames are limited to 2 per 10
- * minutes, which only rules out using them for live counts.
+ * The thread name carries the title *and* the date, so a reschedule renames the
+ * post just as a retitle does. Renaming on edit is fine — the 2-per-10-minutes
+ * limit only rules out names that change with every RSVP.
+ *
+ * Both names are computed from stored values rather than read off the thread,
+ * so a host who renamed their own post by hand keeps that name until something
+ * they can see in the form actually changes.
  */
-async function renameThreadIfTitleChanged(
+async function renameThreadForUpdatedEvent(
   context: AppContext,
   threadId: string,
-  previousTitle: string,
-  nextTitle: string,
+  previous: { title: string; starts_at: number },
+  next: EventDetails,
 ): Promise<void> {
-  if (previousTitle === nextTitle) {
+  const { TZ } = context.environment;
+  const previousName = buildEventThreadName(previous.title, previous.starts_at, TZ);
+  const nextName = buildEventThreadName(next.title, next.startsAt, TZ);
+
+  if (previousName === nextName) {
     return;
   }
 
@@ -103,7 +113,7 @@ async function renameThreadIfTitleChanged(
     return;
   }
 
-  await thread.setName(nextTitle).catch((error: unknown) => {
+  await thread.setName(nextName).catch((error: unknown) => {
     logger.warn('could not rename event thread', { threadId, ...describeError(error) });
   });
 }
@@ -141,7 +151,7 @@ async function applyEventEdit(
     // mutation and simply finds more room this time.
     const promotedUserIds = reconcileEvent(context.database, messageId);
 
-    await renameThreadIfTitleChanged(context, event.thread_id, event.title, details.title);
+    await renameThreadForUpdatedEvent(context, event.thread_id, event, details);
     await refreshEventPanel(context, messageId);
 
     return { message: 'Event updated.', promotedUserIds, threadId: event.thread_id };

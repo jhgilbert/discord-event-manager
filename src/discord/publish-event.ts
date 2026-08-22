@@ -3,6 +3,7 @@ import type { AppContext } from '../context.js';
 import { insertEvent } from '../db/event-queries.js';
 import type { EventDetails, EventRow } from '../domain/types.js';
 import { renderEventPanel } from './event-panel.js';
+import { buildEventThreadName } from './event-thread-name.js';
 import { resolveStateTagId } from './forum-tags.js';
 
 /**
@@ -52,7 +53,7 @@ export async function publishNewEvent(
   const openTagId = resolveStateTagId(context.forum, 'Open');
 
   const thread = await context.forum.threads.create({
-    name: details.title,
+    name: buildEventThreadName(details.title, details.startsAt, context.environment.TZ),
     // One week is the maximum; it keeps posts editable for the whole run-up to
     // an event without the handler having to unarchive on every click.
     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,

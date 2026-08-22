@@ -3,7 +3,14 @@ import { z } from 'zod';
 import type { EventDetails } from './types.js';
 
 /** Discord's own limits, mirrored here so validation matches the modal. */
-export const TITLE_MAX_LENGTH = 90;
+
+/**
+ * A thread name maxes out at 100 characters and the forum post's name carries
+ * the event date as a suffix, which costs at most 32. Capping the field here
+ * means the host is stopped while they can still edit, rather than having their
+ * title quietly truncated after the fact. See discord/event-thread-name.ts.
+ */
+export const TITLE_MAX_LENGTH = 68;
 export const DESCRIPTION_MAX_LENGTH = 4000;
 export const LOCATION_MAX_LENGTH = 200;
 export const CAPACITY_MAX = 10_000;

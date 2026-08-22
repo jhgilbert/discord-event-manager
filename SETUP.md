@@ -225,8 +225,12 @@ Notes:
   on. Use the region name, never an abbreviation like `CST` or a fixed offset:
   the IANA zone carries the daylight-saving rules with it, so an event typed in
   November lands correctly without anyone adjusting anything twice a year.
-  Attendees are unaffected either way — times render in each viewer's own local
-  zone, so someone travelling sees their current local time, not Central.
+  Inside a post, times render in each viewer's own local zone, so someone
+  travelling sees their current local time. The one exception is the post's
+  *name* — `Board game night (Friday, Aug 7 at 6:30 PM)` — which is plain text
+  and so is always written in `TZ`. That is worth knowing only if your members
+  are spread across zones; if they are, the name is the one place they should
+  not trust.
 - **`REMINDER_LEAD_MINUTES` is how far ahead the in-thread reminder is posted.**
   `1440` is the day before; `60` is an hour before. Anything from 1 minute to
   10080 (a week) is accepted, and changing it takes effect on the next deploy
