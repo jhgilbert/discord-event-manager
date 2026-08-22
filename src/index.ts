@@ -72,6 +72,34 @@ function relayConnectionDiagnostics(client: DiscordClient): () => void {
   };
 }
 
+/**
+ * discord.js's response to an unreachable API is to wait — undici's default
+ * header timeout is five minutes — so a network fault is indistinguishable from
+ * a slow start, which is the worst possible failure mode to debug from logs.
+ *
+ * One unauthenticated request with a short deadline turns that into a sentence
+ * naming the cause: DNS failures, refused connections and silently dropped
+ * packets all arrive here as different errors.
+ */
+const REACHABILITY_TIMEOUT_MS = 10_000;
+
+async function reportWhetherDiscordIsReachable(): Promise<void> {
+  try {
+    const response = await fetch('https://discord.com/api/v10/gateway', {
+      signal: AbortSignal.timeout(REACHABILITY_TIMEOUT_MS),
+    });
+
+    logger.info('discord api reachable', { status: response.status });
+  } catch (error: unknown) {
+    // A warning, not a fatal: the login attempt that follows is the real test,
+    // and this should never be the thing that stops a bot from starting.
+    logger.warn('discord api is not reachable from this container', {
+      timeoutMs: REACHABILITY_TIMEOUT_MS,
+      ...describeError(error),
+    });
+  }
+}
+
 async function startBot(): Promise<void> {
   const environment = loadEnvironment();
   const database = openDatabase(environment.DATABASE_PATH);
@@ -143,6 +171,8 @@ async function startBot(): Promise<void> {
   // Bracketing the login means the logs distinguish the three ways this fails:
   // a token Discord rejects outright, a handshake that never completes, and a
   // connection that succeeds but cannot see a channel afterwards.
+  await reportWhetherDiscordIsReachable();
+
   logger.info('logging in to Discord');
   await client.login(environment.DISCORD_TOKEN);
   logger.info('logged in; waiting for the gateway to send ready');
