@@ -1,4 +1,11 @@
-import { Client, Events, GatewayIntentBits, type Client as DiscordClient } from 'discord.js';
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  RESTEvents,
+  type Client as DiscordClient,
+  type RateLimitData,
+} from 'discord.js';
 import { loadEnvironment, type Environment } from './config/environment.js';
 import { openDatabase, type EventDatabase } from './db/database.js';
 import { registerGuildCommands } from './commands/register-commands.js';
@@ -44,6 +51,27 @@ function createDiscordClient(): DiscordClient {
  */
 const READY_TIMEOUT_MS = 60_000;
 
+/**
+ * discord.js says nothing on its own while a connection is failing to
+ * establish — no error, no event, no timeout — so its internal diagnostics are
+ * relayed until the bot is ready and then detached. A handful of lines at boot
+ * is a fair price for being able to see a stalled handshake at all, and for
+ * being able to tell a blocked network apart from a throttled one.
+ */
+function relayConnectionDiagnostics(client: DiscordClient): () => void {
+  const onDebug = (detail: string) => logger.info('discord debug', { detail });
+  const onRateLimited = (info: RateLimitData) =>
+    logger.warn('discord rate limited', { route: info.route, timeToResetMs: info.timeToReset });
+
+  client.on(Events.Debug, onDebug);
+  client.rest.on(RESTEvents.RateLimited, onRateLimited);
+
+  return () => {
+    client.off(Events.Debug, onDebug);
+    client.rest.off(RESTEvents.RateLimited, onRateLimited);
+  };
+}
+
 async function startBot(): Promise<void> {
   const environment = loadEnvironment();
   const database = openDatabase(environment.DATABASE_PATH);
@@ -59,7 +87,10 @@ async function startBot(): Promise<void> {
     process.exit(1);
   }, READY_TIMEOUT_MS);
 
+  const stopConnectionDiagnostics = relayConnectionDiagnostics(client);
+
   client.once(Events.ClientReady, (readyClient) => {
+    stopConnectionDiagnostics();
     clearTimeout(readyTimeout);
 
     void (async () => {
