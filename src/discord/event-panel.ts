@@ -1,0 +1,171 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  type APIEmbedField,
+} from 'discord.js';
+import { RSVP_BUTTON_IDS } from './custom-ids.js';
+import { summarizeCapacity } from '../domain/capacity.js';
+import type { EventRow, RsvpRow } from '../domain/types.js';
+
+/** Discord's hard caps. Exceeding either is a 400, not a truncation. */
+const FIELD_VALUE_MAX = 1024;
+const EMBED_TOTAL_MAX = 6000;
+/** Slack for field names, the footer, and multi-byte characters in names. */
+const EMBED_BUDGET_SAFETY_MARGIN = 400;
+
+const COLOUR_OPEN = 0x57f287;
+const COLOUR_FULL = 0xe67e22;
+const COLOUR_CANCELLED = 0x99aab5;
+
+function formatAttendeeLine(rsvp: RsvpRow): string {
+  return `<@${rsvp.user_id}>${rsvp.plus_one ? ' **+1**' : ''}`;
+}
+
+function formatWaitlistLine(rsvp: RsvpRow, index: number): string {
+  return `${index + 1}. ${formatAttendeeLine(rsvp)}`;
+}
+
+/**
+ * Fills the budget line by line and says how many were dropped, rather than
+ * cutting mid-mention and leaving a broken `<@1234` on screen.
+ */
+function joinLinesWithinBudget(lines: string[], budget: number): string {
+  const kept: string[] = [];
+  let used = 0;
+
+  for (const line of lines) {
+    const cost = line.length + 1;
+    // Reserve room for the "…and N more" note we may still need to append.
+    if (used + cost > budget - 24) {
+      break;
+    }
+    kept.push(line);
+    used += cost;
+  }
+
+  const dropped = lines.length - kept.length;
+  if (dropped > 0) {
+    kept.push(`…and ${dropped} more`);
+  }
+
+  return kept.join('\n');
+}
+
+function describeSpots(event: EventRow, confirmed: RsvpRow[]): string {
+  const { taken, capacity, isOverSubscribed } = summarizeCapacity(event, confirmed);
+  const line = `**${taken}** of **${capacity}** spots taken`;
+
+  // Rendered plainly rather than clamped, so a host who lowered capacity below
+  // the confirmed headcount can see that they did.
+  return isOverSubscribed ? `${line} — over capacity` : line;
+}
+
+function buildWhenField(event: EventRow): APIEmbedField {
+  // `<t:…>` renders in each viewer's own timezone, so the bot never has to
+  // guess where anyone is.
+  return {
+    name: 'When',
+    value: `<t:${event.starts_at}:F> (<t:${event.starts_at}:R>)`,
+  };
+}
+
+/**
+ * The waitlist is kept whole and the going list is truncated first. A cut going
+ * list is cosmetic; a cut waitlist means someone cannot see their own position,
+ * which is the only reason it is numbered.
+ */
+function computeGoingFieldBudget(spentOnEverythingElse: number): number {
+  const remainingTotalBudget = EMBED_TOTAL_MAX - EMBED_BUDGET_SAFETY_MARGIN - spentOnEverythingElse;
+  return Math.max(0, Math.min(FIELD_VALUE_MAX, remainingTotalBudget));
+}
+
+function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow[]): EmbedBuilder {
+  const { isFull } = summarizeCapacity(event, confirmed);
+  const description = event.description ?? '';
+  const spotsValue = describeSpots(event, confirmed);
+
+  const waitlistValue =
+    waiting.length > 0
+      ? joinLinesWithinBudget(waiting.map(formatWaitlistLine), FIELD_VALUE_MAX)
+      : '';
+
+  const whenField = buildWhenField(event);
+  const locationValue = event.location ?? '';
+
+  const goingValue =
+    confirmed.length > 0
+      ? joinLinesWithinBudget(
+          confirmed.map(formatAttendeeLine),
+          computeGoingFieldBudget(
+            event.title.length +
+              description.length +
+              whenField.value.length +
+              locationValue.length +
+              spotsValue.length +
+              waitlistValue.length,
+          ),
+        )
+      : '_Nobody yet — be the first._';
+
+  const fields: APIEmbedField[] = [whenField];
+
+  // Omitted entirely when the host left it blank; an empty "Where" field reads
+  // like missing information rather than a deliberate choice.
+  if (locationValue !== '') {
+    fields.push({ name: 'Where', value: locationValue });
+  }
+
+  fields.push({ name: 'Going', value: goingValue });
+  fields.push({ name: 'Spots', value: spotsValue });
+
+  // Hidden when empty: a visible empty waitlist on a half-full event reads like
+  // the event is already full.
+  if (waitlistValue !== '') {
+    fields.push({ name: 'Waitlist', value: waitlistValue });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle(event.cancelled ? `❌ ${event.title} (cancelled)` : event.title)
+    .setColor(event.cancelled ? COLOUR_CANCELLED : isFull ? COLOUR_FULL : COLOUR_OPEN)
+    .addFields(fields)
+    .setFooter({ text: event.cancelled ? 'This event was cancelled.' : 'RSVP with the buttons below.' });
+
+  return description === '' ? embed : embed.setDescription(description);
+}
+
+/**
+ * Buttons stay enabled at capacity — a click then returns an ephemeral
+ * "you're on the waitlist at #4". Disabling them would be cosmetic anyway: a
+ * stale client still shows them enabled, so the server-side check is required
+ * either way. Cancellation is different, and really does disable them.
+ */
+function buildRsvpButtons(event: EventRow): ActionRowBuilder<ButtonBuilder> {
+  const disabled = Boolean(event.cancelled);
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(RSVP_BUTTON_IDS.goingSolo)
+      .setLabel("I'm in")
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(disabled),
+    new ButtonBuilder()
+      .setCustomId(RSVP_BUTTON_IDS.goingPlusOne)
+      .setLabel("I'm in +1")
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(disabled),
+    new ButtonBuilder()
+      .setCustomId(RSVP_BUTTON_IDS.withdraw)
+      .setLabel("Can't make it")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled),
+  );
+}
+
+export function renderEventPanel(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow[]) {
+  return {
+    embeds: [buildPanelEmbed(event, confirmed, waiting)],
+    components: [buildRsvpButtons(event)],
+  };
+}

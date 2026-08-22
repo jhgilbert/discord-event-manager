@@ -1,0 +1,28 @@
+{
+  "name": "discord-event-manager",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Discord bot that posts events to a forum channel with RSVP buttons, plus-ones, capacity and a waitlist.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.17"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "node --watch --env-file=.env src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "chrono-node": "^2.7.7",
+    "discord.js": "^14.27.0",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^24.0.10",
+    "typescript": "^5.8.3"
+  }
+}
