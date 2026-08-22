@@ -26,7 +26,10 @@ this file covers how the code is arranged.
   in-thread ping for whoever gets in.
 - **Edit** — `/event edit` inside the post, host only.
 - **Cancel** — `/event cancel` inside the post; notifies everyone, tags the post
-  `Cancelled`, locks the thread.
+  `Canceled`, locks the thread.
+- **Delete** — `/event delete` inside the post, **server administrators only**.
+  Erases the post, its replies and its RSVPs, after a confirmation naming what
+  will be lost. Nobody is notified; use `cancel` for that.
 - **Reminders** — posted in-thread to confirmed attendees, `REMINDER_LEAD_MINUTES`
   before the start (1440 = the day before). Events posted at shorter notice than
   the lead skip the reminder: the post is the notice.
@@ -62,7 +65,7 @@ src/
     event-panel.ts     the embed and buttons
     publish-event.ts   forum post creation
     refresh-event-panel.ts  re-render, unarchive, debounce
-    forum-tags.ts      Open / Full / Cancelled
+    forum-tags.ts      Open / Full / Canceled
     announcements.ts   in-thread pings
     launcher-panel.ts  the pinned "New event" message
     channels.ts        startup channel resolution

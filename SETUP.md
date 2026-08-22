@@ -52,7 +52,7 @@ Under **Bot Permissions**, tick exactly these:
 | Read Message History | Find its own launcher panel on restart instead of posting a duplicate |
 | Create Public Threads | A forum post *is* a thread — this is how events get created |
 | Send Messages in Threads | Post promotion, reminder and cancellation notices |
-| Manage Threads | Unarchive before editing, apply state tags, lock on cancel |
+| Manage Threads | Unarchive before editing, apply state tags, lock on cancel, delete on `/event delete` |
 | Pin Messages | Pin the launcher panel |
 
 Copy the generated URL at the bottom, open it, pick your server, and authorise.
@@ -95,7 +95,7 @@ A **Forum** channel. This is where event posts appear.
 
 - `Open`
 - `Full`
-- `Cancelled`
+- `Canceled`
 
 The bot matches these by name, case-insensitively, and swaps whichever one is
 applied as an event fills up or is called off. This is the only state visible in
@@ -130,7 +130,7 @@ automatically, named after the application) and allow:
 | Send Messages in Posts | No promotion, reminder or cancellation notices |
 | Embed Links | The event panel renders empty |
 | Read Message History | The panel can't be re-read, so RSVPs don't update |
-| Manage Threads | No state tags, no unarchive-before-edit, no lock on cancel |
+| Manage Threads | No state tags, no unarchive-before-edit, no lock on cancel, no `/event delete` |
 
 You can add the bot user directly instead of its role; both work. Adding the
 role is easier to audit later.
@@ -277,6 +277,7 @@ to watch the waitlist behave.
 | Create an event | **New event** button in `#events-launcher`, or `/event create` |
 | Edit an event | `/event edit`, run **inside that event's post** |
 | Cancel an event | `/event cancel`, run **inside that event's post** |
+| Delete an event | `/event delete`, run **inside that event's post** — admins only |
 | RSVP | The buttons on the event post |
 
 `edit` and `cancel` are run inside the event's own thread because that is how
@@ -285,8 +286,16 @@ the bot knows which event you mean — no ID to copy. `edit` is host-only;
 after a host who has left.
 
 Cancelling notifies everyone who RSVPed (confirmed *and* waitlisted — a queued
-member is still holding the evening open), applies the `Cancelled` tag, and
+member is still holding the evening open), applies the `Canceled` tag, and
 locks the thread.
+
+**Cancel and delete are different tools.** Cancel is the one to reach for
+normally: it tells everyone, and the post stays as a record. Delete is for
+mistakes and spam — a duplicate post, a test event, something that should never
+have been there. It erases the post, every reply in it and every RSVP, tells
+nobody, and cannot be undone, so it is restricted to **Administrator** rather
+than the Manage Server permission that cancelling accepts. It asks for
+confirmation first and names what will be lost.
 
 ---
 
@@ -317,7 +326,7 @@ Messages. Harmless — the panel works unpinned. Grant the permission and restar
 if you want it pinned.
 
 **Startup log says `forum is missing event state tags`.** Create the `Open`,
-`Full` and `Cancelled` tags on the forum (step 1.5). Events still work; they
+`Full` and `Canceled` tags on the forum (step 1.5). Events still work; they
 just won't show state in the forum list.
 
 **Creating an event fails.** The bot needs **Create Posts** allowed on the forum

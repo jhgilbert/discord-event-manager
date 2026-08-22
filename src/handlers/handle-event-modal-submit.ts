@@ -136,7 +136,7 @@ async function applyEventEdit(
     }
 
     if (event.cancelled) {
-      return { message: 'This event was cancelled and can no longer be edited.', promotedUserIds: [], threadId: null };
+      return { message: 'This event was canceled and can no longer be edited.', promotedUserIds: [], threadId: null };
     }
 
     updateEventDetails(context.database, messageId, details);

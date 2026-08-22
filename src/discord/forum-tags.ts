@@ -6,7 +6,7 @@ import { logger } from '../lib/logger.js';
  * post. Thread names cannot carry live counts — renames are limited to 2 per
  * 10 minutes — so tags do that job instead.
  */
-export const EVENT_STATE_TAG_NAMES = ['Open', 'Full', 'Cancelled'] as const;
+export const EVENT_STATE_TAG_NAMES = ['Open', 'Full', 'Canceled'] as const;
 export type EventStateTagName = (typeof EVENT_STATE_TAG_NAMES)[number];
 
 function findTagIdByName(forum: ForumChannel, name: string): string | null {
@@ -37,7 +37,7 @@ export function chooseStateTagName(event: {
   isFull: boolean;
 }): EventStateTagName {
   if (event.cancelled) {
-    return 'Cancelled';
+    return 'Canceled';
   }
   return event.isFull ? 'Full' : 'Open';
 }

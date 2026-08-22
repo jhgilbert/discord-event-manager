@@ -5,8 +5,10 @@ import {
   LAUNCH_NEW_EVENT_BUTTON_ID,
   readDraftTokenFromButtonId,
   readEventModalTarget,
+  readMessageIdFromConfirmDeleteButtonId,
   readRsvpButtonAction,
 } from '../discord/custom-ids.js';
+import { handleConfirmDeleteButton } from './handle-confirm-delete-button.js';
 import { handleEventCommand } from './handle-event-command.js';
 import { handleEventModalSubmit } from './handle-event-modal-submit.js';
 import { handleNewEventButton } from './handle-new-event-button.js';
@@ -28,6 +30,11 @@ async function routeButton(context: AppContext, interaction: ButtonInteraction):
 
   if (readDraftTokenFromButtonId(interaction.customId) !== null) {
     await handleReopenModalButton(interaction);
+    return;
+  }
+
+  if (readMessageIdFromConfirmDeleteButtonId(interaction.customId) !== null) {
+    await handleConfirmDeleteButton(context, interaction);
     return;
   }
 

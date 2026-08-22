@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   MessageFlags,
   PermissionFlagsBits,
   type ChatInputCommandInteraction,
@@ -6,6 +9,7 @@ import {
 import type { AppContext } from '../context.js';
 import { EVENT_SUBCOMMANDS } from '../commands/event-command.js';
 import { findEventByMessageId, markEventCancelled } from '../db/event-queries.js';
+import { buildConfirmDeleteButtonId } from '../discord/custom-ids.js';
 import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
 import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
@@ -37,6 +41,16 @@ function isHostOrServerManager(
   // A server manager can clean up after a host who left; ordinary members
   // cannot touch someone else's event.
   return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false;
+}
+
+/**
+ * Deliberately stricter than the `ManageGuild` check above. Cancelling is
+ * recoverable and tells everyone what happened; deleting destroys the post, its
+ * whole discussion and every RSVP with no notice and no undo, so it is held to
+ * the server's highest permission. Guild owners hold it implicitly.
+ */
+function isServerAdministrator(interaction: ChatInputCommandInteraction): boolean {
+  return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
 }
 
 const NOT_IN_AN_EVENT_POST =
@@ -75,7 +89,7 @@ async function handleEditSubcommand(
   }
 
   if (event.cancelled) {
-    await replyEphemerally(interaction, 'This event was cancelled and can no longer be edited.');
+    await replyEphemerally(interaction, 'This event was canceled and can no longer be edited.');
     return;
   }
 
@@ -102,7 +116,7 @@ async function lockAndArchiveThread(context: AppContext, threadId: string): Prom
     await thread.setLocked(true);
     await thread.setArchived(true);
   } catch (error: unknown) {
-    logger.warn('could not lock or archive the cancelled event thread', {
+    logger.warn('could not lock or archive the canceled event thread', {
       threadId,
       ...describeError(error),
     });
@@ -126,7 +140,7 @@ async function handleCancelSubcommand(
   }
 
   if (event.cancelled) {
-    await replyEphemerally(interaction, 'This event is already cancelled.');
+    await replyEphemerally(interaction, 'This event is already canceled.');
     return;
   }
 
@@ -158,7 +172,54 @@ async function handleCancelSubcommand(
   });
 
   await interaction.editReply({
-    content: `Cancelled. ${everyoneToNotify.length} ${everyoneToNotify.length === 1 ? 'person was' : 'people were'} notified in the thread, and the post is now locked.`,
+    content: `Canceled. ${everyoneToNotify.length} ${everyoneToNotify.length === 1 ? 'person was' : 'people were'} notified in the thread, and the post is now locked.`,
+  });
+}
+
+/**
+ * Deletion is irreversible and silent, and `/event delete` typed in the wrong
+ * post looks exactly like `/event delete` typed in the right one — so it asks
+ * first, and the question names what is about to be lost.
+ */
+async function handleDeleteSubcommand(
+  context: AppContext,
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const event = findEventForInteractionChannel(context, interaction);
+
+  if (event === null) {
+    await replyEphemerally(interaction, NOT_IN_AN_EVENT_POST);
+    return;
+  }
+
+  if (!isServerAdministrator(interaction)) {
+    await replyEphemerally(
+      interaction,
+      'Only a server administrator can delete an event. To call one off without erasing it, use `/event cancel`.',
+    );
+    return;
+  }
+
+  const rsvpCount =
+    listConfirmedInJoinOrder(context.database, event.message_id).length +
+    listWaitlistInJoinOrder(context.database, event.message_id).length;
+
+  const confirmButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(buildConfirmDeleteButtonId(event.message_id))
+      .setLabel('Delete permanently')
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  await interaction.reply({
+    content: [
+      `**${event.title}** — this deletes the post, every reply in it, and ${rsvpCount} ${rsvpCount === 1 ? 'RSVP' : 'RSVPs'}.`,
+      'Nobody is notified and nothing can be recovered.',
+      '',
+      'If you meant to call the event off, use `/event cancel` instead — that tells everyone and leaves the post in place.',
+    ].join('\n'),
+    components: [confirmButton],
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -178,6 +239,9 @@ export async function handleEventCommand(
         return;
       case EVENT_SUBCOMMANDS.cancel:
         await handleCancelSubcommand(context, interaction);
+        return;
+      case EVENT_SUBCOMMANDS.delete:
+        await handleDeleteSubcommand(context, interaction);
         return;
       default:
         await replyEphemerally(interaction, 'Unknown subcommand.');

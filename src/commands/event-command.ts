@@ -6,6 +6,7 @@ export const EVENT_SUBCOMMANDS = {
   create: 'create',
   edit: 'edit',
   cancel: 'cancel',
+  delete: 'delete',
 } as const;
 
 /**
@@ -33,6 +34,11 @@ export function buildEventCommandDefinition() {
       subcommand
         .setName(EVENT_SUBCOMMANDS.cancel)
         .setDescription("Cancel this event and notify attendees (run inside the event's post)"),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName(EVENT_SUBCOMMANDS.delete)
+        .setDescription('Admin only: erase this event and its post entirely, with no notice'),
     )
     .toJSON();
 }

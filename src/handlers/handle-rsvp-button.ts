@@ -187,7 +187,7 @@ async function processRsvpClick(
 
     if (event.cancelled) {
       return {
-        ephemeralMessage: 'This event has been cancelled.',
+        ephemeralMessage: 'This event has been canceled.',
         promotedUserIds: [],
         threadId: event.thread_id,
       };

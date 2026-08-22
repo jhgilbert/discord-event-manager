@@ -72,7 +72,7 @@ export async function announceEventCancelled(
   await announceInEventThread(
     context,
     threadId,
-    (mentions) => `${mentions} — **${eventTitle}** has been cancelled. Sorry for the short notice.`,
+    (mentions) => `${mentions} — **${eventTitle}** has been canceled. Sorry for the short notice.`,
     attendeeUserIds,
   );
 }

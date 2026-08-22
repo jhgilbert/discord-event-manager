@@ -127,10 +127,10 @@ function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow
   }
 
   const embed = new EmbedBuilder()
-    .setTitle(event.cancelled ? `❌ ${event.title} (cancelled)` : event.title)
+    .setTitle(event.cancelled ? `❌ ${event.title} (canceled)` : event.title)
     .setColor(event.cancelled ? COLOUR_CANCELLED : isFull ? COLOUR_FULL : COLOUR_OPEN)
     .addFields(fields)
-    .setFooter({ text: event.cancelled ? 'This event was cancelled.' : 'RSVP with the buttons below.' });
+    .setFooter({ text: event.cancelled ? 'This event was canceled.' : 'RSVP with the buttons below.' });
 
   return description === '' ? embed : embed.setDescription(description);
 }

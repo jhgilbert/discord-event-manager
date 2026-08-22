@@ -53,6 +53,21 @@ export function markEventCancelled(database: EventDatabase, messageId: string): 
   database.prepare('UPDATE events SET cancelled = 1 WHERE message_id = ?').run(messageId);
 }
 
+/**
+ * Erases the event and its RSVPs together. There is no foreign key between the
+ * two tables, so the cascade is written out here — and wrapped in a transaction,
+ * because an event row surviving without its RSVPs would render as an empty
+ * roster rather than as an error anyone would notice.
+ */
+export function deleteEventAndRsvps(database: EventDatabase, messageId: string): void {
+  const deleteBoth = database.transaction((id: string) => {
+    database.prepare('DELETE FROM rsvps WHERE message_id = ?').run(id);
+    database.prepare('DELETE FROM events WHERE message_id = ?').run(id);
+  });
+
+  deleteBoth(messageId);
+}
+
 export function markReminderSent(database: EventDatabase, messageId: string): void {
   database.prepare('UPDATE events SET reminder_sent = 1 WHERE message_id = ?').run(messageId);
 }

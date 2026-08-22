@@ -41,6 +41,23 @@ export function readDraftTokenFromButtonId(customId: string): string | null {
     : null;
 }
 
+const CONFIRM_DELETE_PREFIX = `event:${CUSTOM_ID_VERSION}:delete:`;
+
+/**
+ * The event ID travels in the button rather than being looked up from the
+ * channel, so the confirmation still refers to the right event even though the
+ * thread it was sent in is about to stop existing.
+ */
+export function buildConfirmDeleteButtonId(messageId: string): string {
+  return `${CONFIRM_DELETE_PREFIX}${messageId}`;
+}
+
+export function readMessageIdFromConfirmDeleteButtonId(customId: string): string | null {
+  return customId.startsWith(CONFIRM_DELETE_PREFIX)
+    ? customId.slice(CONFIRM_DELETE_PREFIX.length)
+    : null;
+}
+
 const CREATE_MODAL_ID = `event:${CUSTOM_ID_VERSION}:create`;
 const EDIT_MODAL_PREFIX = `event:${CUSTOM_ID_VERSION}:edit:`;
 
