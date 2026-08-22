@@ -3,7 +3,7 @@
 A Discord bot that turns a modal submission into a forum post with RSVP buttons,
 a live roster, plus-ones, capacity and a waitlist.
 
-Hosts create events from a button in `#events-launcher`. The bot posts them to
+Hosts create events from a button in `#event-builder`. The bot posts them to
 the `#events` forum, keeps the roster current as people click, and promotes from
 the waitlist whenever a seat frees up.
 
@@ -74,7 +74,7 @@ src/
     announcements.ts   in-thread pings
     event-edit-notice.ts   the "what changed" message
     event-permissions.ts   who may edit or cancel
-    launcher-panel.ts  the pinned "New event" message
+    event-builder-panel.ts  the pinned "New event" message
     channels.ts        startup channel resolution
   handlers/            one file per interaction, plus a router
   commands/            slash command definition and registration
@@ -131,7 +131,7 @@ npm run dev
 
 `npm run dev` uses Node's built-in `--env-file` and `--watch`, so there is no
 dotenv or ts-node dependency. Point it at a test server rather than the live
-one — startup registers slash commands and posts a launcher panel.
+one — startup registers slash commands and posts a New event panel.
 
 ```bash
 npm run typecheck   # tsc --noEmit

@@ -16,7 +16,7 @@ const EnvironmentSchema = z.object({
     .trim()
     .min(1, 'is required'),
   DISCORD_GUILD_ID: DiscordIdSchema,
-  LAUNCHER_CHANNEL_ID: DiscordIdSchema,
+  EVENT_BUILDER_CHANNEL_ID: DiscordIdSchema,
   EVENTS_FORUM_CHANNEL_ID: DiscordIdSchema,
   DATABASE_PATH: z.string().trim().min(1).default('/data/events.db'),
   TZ: z.string().trim().min(1).default('UTC'),

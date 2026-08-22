@@ -46,14 +46,14 @@ Under **Bot Permissions**, tick exactly these:
 
 | Permission | Why it is needed |
 |---|---|
-| View Channels | See the launcher channel and the forum at all |
-| Send Messages | Post the launcher panel |
+| View Channels | See the event builder channel and the forum at all |
+| Send Messages | Post the New event panel |
 | Embed Links | The event panel is an embed |
-| Read Message History | Find its own launcher panel on restart instead of posting a duplicate |
+| Read Message History | Find its own New event panel on restart instead of posting a duplicate |
 | Create Public Threads | A forum post *is* a thread — this is how events get created |
 | Send Messages in Threads | Post promotion, reminder and cancellation notices |
 | Manage Threads | Unarchive before editing, apply state tags, lock on cancel, delete on `/event delete` |
-| Pin Messages | Pin the launcher panel |
+| Pin Messages | Pin the New event panel |
 
 Copy the generated URL at the bottom, open it, pick your server, and authorise.
 
@@ -70,7 +70,7 @@ private, the bot needs an explicit allow on that channel as well. See step 1.5.
 > portal UIs may not show it yet. The bot handles this: it logs a warning and
 > carries on with the panel unpinned. Everything else works.
 
-### 1.4 Create `#events-launcher`
+### 1.4 Create `#event-builder`
 
 A normal **text** channel. This is where the "New event" button lives.
 
@@ -85,7 +85,7 @@ organiser role. You can change this at any time without redeploying. If you do
 make it private, the bot needs a **View Channel** allow of its own here too —
 same reasoning as the forum in step 1.5.
 
-Right-click the channel → **Copy Channel ID**. This is `LAUNCHER_CHANNEL_ID`.
+Right-click the channel → **Copy Channel ID**. This is `EVENT_BUILDER_CHANNEL_ID`.
 
 ### 1.5 Create `#events`
 
@@ -135,11 +135,11 @@ automatically, named after the application) and allow:
 You can add the bot user directly instead of its role; both work. Adding the
 role is easier to audit later.
 
-**Keep `#events-launcher` no wider than `#events`.** Anyone who can see the
-launcher can create an event, and the bot replies with a link to the new post.
-If someone can reach the launcher but not the forum, they get a link that leads
-nowhere and an event they can't manage. Restricting the forum is a good reason
-to restrict the launcher to the same roles — or a subset.
+**Keep `#event-builder` no wider than `#events`.** Anyone who can see the event
+builder channel can create an event, and the bot replies with a link to the new
+post. If someone can reach the builder but not the forum, they get a link that
+leads nowhere and an event they can't manage. Restricting the forum is a good
+reason to restrict the builder to the same roles — or a subset.
 
 Right-click the channel → **Copy Channel ID**. This is
 `EVENTS_FORUM_CHANNEL_ID`.
@@ -205,7 +205,7 @@ Two consequences worth knowing:
 ```
 DISCORD_TOKEN=your-token-here
 DISCORD_GUILD_ID=000000000000000000
-LAUNCHER_CHANNEL_ID=000000000000000000
+EVENT_BUILDER_CHANNEL_ID=000000000000000000
 EVENTS_FORUM_CHANNEL_ID=000000000000000000
 DATABASE_PATH=/data/events.db
 TZ=America/Chicago
@@ -251,7 +251,7 @@ View Logs**. A healthy start looks like:
 ```json
 {"level":"info","message":"database ready","databasePath":"/data/events.db"}
 {"level":"info","message":"registered guild commands","guildId":"..."}
-{"level":"info","message":"posted launcher panel","messageId":"..."}
+{"level":"info","message":"posted new event panel","messageId":"..."}
 {"level":"info","message":"bot ready","user":"Events#1234","timeZone":"America/Chicago"}
 ```
 
@@ -260,7 +260,7 @@ worker: it makes an outbound gateway connection and listens on nothing.
 
 ### 2.6 Check it works
 
-1. Look at `#events-launcher` — the pinned **New event** panel should be there.
+1. Look at `#event-builder` — the pinned **New event** panel should be there.
 2. Click **New event**, fill in the form, submit.
 3. A post appears in `#events` tagged `Open`, with the three RSVP buttons. You
    are already on the **Going** list: hosts are RSVPed to their own event
@@ -277,7 +277,7 @@ guest needs two and waits for them.
 
 | Action | How |
 |---|---|
-| Create an event | **New event** button in `#events-launcher`, or `/event create` |
+| Create an event | **New event** button in `#event-builder`, or `/event create` |
 | Edit an event | `/event edit`, run **inside that event's post** |
 | Cancel an event | `/event cancel`, run **inside that event's post** |
 | Delete an event | `/event delete`, run **inside that event's post** — admins only |
@@ -342,8 +342,8 @@ command in `railway.json` is therefore `npm run build` alone — no install step
 If you add one back, use `npm install`, which updates in place rather than
 wiping the directory first.
 
-**The bot is online but the launcher panel never appeared.** It cannot see or
-post in `#events-launcher`. Check the bot's role has View Channels and Send
+**The bot is online but the New event panel never appeared.** It cannot see or
+post in `#event-builder`. Check the bot's role has View Channels and Send
 Messages there. The logs name the failure.
 
 **The bot exits at startup saying a channel was not found, or the log shows
@@ -353,7 +353,7 @@ indistinguishable, because Discord hides channels it can't see instead of
 refusing them. Add the bot's role to that channel's permissions (step 1.5). If
 the channel isn't private, re-copy the ID with Developer Mode on.
 
-**Startup log says `could not pin the launcher panel`.** The bot lacks Pin
+**Startup log says `could not pin the new event panel`.** The bot lacks Pin
 Messages. Harmless — the panel works unpinned. Grant the permission and restart
 if you want it pinned.
 

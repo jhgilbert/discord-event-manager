@@ -11,7 +11,7 @@ import { openDatabase, type EventDatabase } from './db/database.js';
 import { registerGuildCommands } from './commands/register-commands.js';
 import { fetchForumChannel, fetchTextChannel } from './discord/channels.js';
 import { warnAboutMissingStateTags } from './discord/forum-tags.js';
-import { ensureLauncherPanelExists } from './discord/launcher-panel.js';
+import { ensureNewEventPanelExists } from './discord/event-builder-panel.js';
 import { handleInteraction } from './handlers/handle-interaction.js';
 import { startReminderJob } from './jobs/reminder-job.js';
 import type { AppContext } from './context.js';
@@ -22,12 +22,12 @@ async function buildAppContext(
   database: EventDatabase,
   environment: Environment,
 ): Promise<AppContext> {
-  const [forum, launcherChannel] = await Promise.all([
+  const [forum, eventBuilderChannel] = await Promise.all([
     fetchForumChannel(client, environment.EVENTS_FORUM_CHANNEL_ID),
-    fetchTextChannel(client, environment.LAUNCHER_CHANNEL_ID),
+    fetchTextChannel(client, environment.EVENT_BUILDER_CHANNEL_ID),
   ]);
 
-  return { client, database, environment, forum, launcherChannel };
+  return { client, database, environment, forum, eventBuilderChannel };
 }
 
 /**
@@ -127,7 +127,7 @@ async function startBot(): Promise<void> {
 
         warnAboutMissingStateTags(context.forum);
         await registerGuildCommands(readyClient, environment.DISCORD_GUILD_ID);
-        await ensureLauncherPanelExists(context.launcherChannel, readyClient.user.id);
+        await ensureNewEventPanelExists(context.eventBuilderChannel, readyClient.user.id);
 
         client.on(Events.InteractionCreate, (interaction) => {
           void handleInteraction(context, interaction);

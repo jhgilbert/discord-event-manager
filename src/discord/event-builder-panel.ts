@@ -15,7 +15,7 @@ import { describeError, logger } from '../lib/logger.js';
  * trigger: no syntax to remember, and discoverable by anyone who wanders into
  * the channel. `/event create` is the same handler behind a command.
  */
-function buildLauncherMessagePayload() {
+function buildNewEventPanelPayload() {
   const embed = new EmbedBuilder()
     .setTitle('Create an event')
     .setDescription(
@@ -39,7 +39,7 @@ function buildLauncherMessagePayload() {
   return { embeds: [embed], components: [buttons] };
 }
 
-function isOurLauncherMessage(message: Message, botUserId: string): boolean {
+function isOurNewEventPanel(message: Message, botUserId: string): boolean {
   if (message.author.id !== botUserId) {
     return false;
   }
@@ -56,12 +56,12 @@ function isOurLauncherMessage(message: Message, botUserId: string): boolean {
   );
 }
 
-async function findExistingLauncherMessage(
+async function findExistingNewEventPanel(
   channel: TextChannel,
   botUserId: string,
 ): Promise<Message | null> {
   const recentMessages = await channel.messages.fetch({ limit: 50 });
-  return recentMessages.find((message) => isOurLauncherMessage(message, botUserId)) ?? null;
+  return recentMessages.find((message) => isOurNewEventPanel(message, botUserId)) ?? null;
 }
 
 /**
@@ -69,29 +69,29 @@ async function findExistingLauncherMessage(
  * still in the channel, so restarts and redeploys do not litter the channel
  * with duplicates.
  */
-export async function ensureLauncherPanelExists(
+export async function ensureNewEventPanelExists(
   channel: TextChannel,
   botUserId: string,
 ): Promise<void> {
-  const existing = await findExistingLauncherMessage(channel, botUserId);
+  const existing = await findExistingNewEventPanel(channel, botUserId);
 
   if (existing !== null) {
     // Refreshed so copy changes ship without the admin deleting the old panel.
-    await existing.edit(buildLauncherMessagePayload());
-    logger.info('reused existing launcher panel', { messageId: existing.id });
+    await existing.edit(buildNewEventPanelPayload());
+    logger.info('reused existing new event panel', { messageId: existing.id });
     return;
   }
 
-  const posted = await channel.send(buildLauncherMessagePayload());
+  const posted = await channel.send(buildNewEventPanelPayload());
 
   // Pinning needs the Pin Messages permission, which was split out of Manage
   // Messages in February 2026. The panel still works unpinned, so a failure
   // here is a warning rather than a crash.
   await posted.pin().catch((error: unknown) => {
-    logger.warn('could not pin the launcher panel; grant Pin Messages to fix', {
+    logger.warn('could not pin the new event panel; grant Pin Messages to fix', {
       ...describeError(error),
     });
   });
 
-  logger.info('posted launcher panel', { messageId: posted.id });
+  logger.info('posted new event panel', { messageId: posted.id });
 }

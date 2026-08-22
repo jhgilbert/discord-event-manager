@@ -12,5 +12,5 @@ export interface AppContext {
   database: EventDatabase;
   environment: Environment;
   forum: ForumChannel;
-  launcherChannel: TextChannel;
+  eventBuilderChannel: TextChannel;
 }

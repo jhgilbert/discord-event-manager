@@ -14,7 +14,7 @@ export const EVENT_SUBCOMMANDS = {
  * modal as its first response, and the modal is the form.
  *
  * Note that slash commands cannot be typed at a forum channel's root — there is
- * no composer there — so `create` is used from the launcher channel, while
+ * no composer there — so `create` is used from the event builder channel, while
  * `edit` and `cancel` are used inside an event's own post.
  */
 export function buildEventCommandDefinition() {

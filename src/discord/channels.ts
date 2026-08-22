@@ -65,12 +65,12 @@ export async function fetchTextChannel(client: Client, channelId: string): Promi
   const channel = await fetchChannelIfVisible(client, channelId);
 
   if (channel === null) {
-    throw new Error(describeUnreachableChannel('LAUNCHER_CHANNEL_ID', channelId));
+    throw new Error(describeUnreachableChannel('EVENT_BUILDER_CHANNEL_ID', channelId));
   }
 
   if (channel.type !== ChannelType.GuildText) {
     throw new Error(
-      `LAUNCHER_CHANNEL_ID ${channelId} is not a normal text channel. Slash commands and the "New event" button need a channel with a composer.`,
+      `EVENT_BUILDER_CHANNEL_ID ${channelId} is not a normal text channel. Slash commands and the "New event" button need a channel with a composer.`,
     );
   }
 
