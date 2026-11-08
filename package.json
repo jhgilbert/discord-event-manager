@@ -6,7 +6,7 @@
   "description": "Discord bot that posts events to a forum channel with RSVP buttons, plus-ones, capacity and a waitlist.",
   "type": "module",
   "engines": {
-    "node": ">=24.17"
+    "node": ">=24"
   },
   "scripts": {
     "build": "tsc",
@@ -18,7 +18,7 @@
     "better-sqlite3": "^12.2.0",
     "chrono-node": "^2.7.7",
     "discord.js": "^14.27.0",
-    "zod": "^4.0.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
