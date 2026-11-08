@@ -15,7 +15,7 @@ import { isHostOrServerManager } from '../discord/event-permissions.js';
 import {
   describePlusOnePolicyLine,
   describePlusOnePolicyShort,
-  formatPlusOneDate,
+  formatPlusOneDay,
 } from '../discord/plus-one-copy.js';
 import {
   buildPlusOneSettingsButton,
@@ -111,7 +111,7 @@ async function applyPlusOneSettings(
     // Parsed inside the lock because it validates against the start time,
     // which a concurrent edit could be changing.
     const parsed = parsePlusOneForm(readPlusOneFormFromModal(interaction), event.starts_at, (unix) =>
-      formatPlusOneDate(unix, TZ),
+      formatPlusOneDay(unix, TZ),
     );
 
     if (!parsed.ok) {
