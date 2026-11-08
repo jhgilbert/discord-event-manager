@@ -22,9 +22,13 @@ interface ActingMember {
  * guild owner pass here without needing to be named separately.
  */
 export function isHostOrServerManager(interaction: ActingMember, event: EventRow): boolean {
-  if (event.host_id === interaction.user.id) {
-    return true;
-  }
+  return event.host_id === interaction.user.id || isServerManager(interaction);
+}
 
+/**
+ * `/event reload`. Moderator housekeeping, so being the host is not enough on
+ * its own — though a host who is also a server manager passes.
+ */
+export function isServerManager(interaction: ActingMember): boolean {
   return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false;
 }

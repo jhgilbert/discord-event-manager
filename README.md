@@ -43,6 +43,9 @@ this file covers how the code is arranged.
 - **Delete** — `/event delete` inside the post, **server administrators only**.
   Erases the post, its replies and its RSVPs, after a confirmation naming what
   will be lost. Nobody is notified; use `cancel` for that.
+- **Reload** — `/event reload` inside the post, **Manage Server** only (being
+  the host is not enough). Looks up every attendee's current server nickname
+  and redraws the post. Works on canceled and past posts, which it re-closes.
 - **Reminders** — posted in-thread to confirmed attendees, `REMINDER_LEAD_MINUTES`
   before the start (1440 = the day before). Events posted at shorter notice than
   the lead skip the reminder: the post is the notice.

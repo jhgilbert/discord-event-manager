@@ -58,6 +58,41 @@ function listUserIdsMissingAName(context: AppContext, event: EventRow): string[]
   return [...missing].filter((userId) => !userIdsThatAreGone.has(userId));
 }
 
+type LookupResult = 'stored' | 'gone' | 'failed';
+
+/**
+ * `force` skips discord.js's member cache, which can hold a nickname from
+ * before it changed — the whole point of a reload.
+ */
+async function lookUpAndStoreName(
+  context: AppContext,
+  guild: Guild,
+  event: EventRow,
+  userId: string,
+  force: boolean,
+): Promise<LookupResult> {
+  try {
+    const member = await guild.members.fetch({ user: userId, force });
+
+    updateRsvpDisplayName(context.database, event.message_id, userId, member.displayName);
+    if (userId === event.host_id) {
+      updateHostDisplayName(context.database, event.message_id, member.displayName);
+    }
+
+    userIdsThatAreGone.delete(userId);
+    return 'stored';
+  } catch (error: unknown) {
+    // Anything else — a timeout, a rate limit — is left to the next render.
+    if (isGoneForGood(error)) {
+      userIdsThatAreGone.add(userId);
+      return 'gone';
+    }
+
+    logger.warn('could not look up display name', { userId, ...describeError(error) });
+    return 'failed';
+  }
+}
+
 /**
  * Safe outside the per-event lock, which trailing renders run without: it only
  * ever writes a name, and a name is never read by the seating rules. An RSVP
@@ -69,21 +104,43 @@ export async function fillInMissingDisplayNames(
   event: EventRow,
 ): Promise<void> {
   for (const userId of listUserIdsMissingAName(context, event).slice(0, LOOKUPS_PER_RENDER)) {
-    try {
-      const member = await guild.members.fetch(userId);
-
-      updateRsvpDisplayName(context.database, event.message_id, userId, member.displayName);
-      if (userId === event.host_id) {
-        updateHostDisplayName(context.database, event.message_id, member.displayName);
-      }
-    } catch (error: unknown) {
-      // Anything else — a timeout, a rate limit — is left to the next render.
-      if (isGoneForGood(error)) {
-        userIdsThatAreGone.add(userId);
-        continue;
-      }
-
-      logger.warn('could not look up display name', { userId, ...describeError(error) });
-    }
+    await lookUpAndStoreName(context, guild, event, userId, false);
   }
+}
+
+export interface NameRefreshSummary {
+  updated: number;
+  /** Left the server or deleted their account; their last known name stays. */
+  gone: number;
+  failed: number;
+}
+
+function listEveryoneOnTheEvent(context: AppContext, event: EventRow): string[] {
+  return [
+    ...new Set([
+      event.host_id,
+      ...listConfirmedInJoinOrder(context.database, event.message_id).map((rsvp) => rsvp.user_id),
+      ...listWaitlistInJoinOrder(context.database, event.message_id).map((rsvp) => rsvp.user_id),
+    ]),
+  ];
+}
+
+/**
+ * For `/event reload`: everyone, not just the missing, and no per-render cap —
+ * a moderator asked for it and is waiting on the answer. People once found to
+ * be gone are asked again, in case they rejoined.
+ */
+export async function refreshAllDisplayNames(
+  context: AppContext,
+  guild: Guild,
+  event: EventRow,
+): Promise<NameRefreshSummary> {
+  const summary: NameRefreshSummary = { updated: 0, gone: 0, failed: 0 };
+
+  for (const userId of listEveryoneOnTheEvent(context, event)) {
+    const result = await lookUpAndStoreName(context, guild, event, userId, true);
+    summary[result === 'stored' ? 'updated' : result] += 1;
+  }
+
+  return summary;
 }

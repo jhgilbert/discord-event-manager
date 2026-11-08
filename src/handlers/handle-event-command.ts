@@ -13,7 +13,11 @@ import { buildConfirmDeleteButtonId } from '../discord/custom-ids.js';
 import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
 import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
-import { isHostOrServerManager } from '../discord/event-permissions.js';
+import { isHostOrServerManager, isServerManager } from '../discord/event-permissions.js';
+import {
+  refreshAllDisplayNames,
+  type NameRefreshSummary,
+} from '../discord/backfill-display-names.js';
 import { announceEventCancelled } from '../discord/announcements.js';
 import { lockAndCloseThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
@@ -201,6 +205,67 @@ async function handleDeleteSubcommand(
   });
 }
 
+function describeNameRefresh(summary: NameRefreshSummary): string {
+  const parts = [`${summary.updated} ${summary.updated === 1 ? 'name' : 'names'} refreshed`];
+
+  if (summary.gone > 0) {
+    parts.push(
+      `${summary.gone} ${summary.gone === 1 ? 'person has' : 'people have'} left the server and ${summary.gone === 1 ? 'keeps their' : 'keep their'} last known name`,
+    );
+  }
+  if (summary.failed > 0) {
+    parts.push(`${summary.failed} could not be looked up right now — try again in a minute`);
+  }
+
+  return `Reloaded. ${parts.join('; ')}.`;
+}
+
+/**
+ * Works on canceled and past posts too, since those are exactly the ones nobody
+ * clicks any more. Redrawing has to reopen the thread to edit it, so a closed
+ * post is locked and closed again afterwards.
+ */
+async function handleReloadSubcommand(
+  context: AppContext,
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const event = findEventForInteractionChannel(context, interaction);
+
+  if (event === null) {
+    await replyEphemerally(interaction, NOT_IN_AN_EVENT_POST);
+    return;
+  }
+
+  if (!isServerManager(interaction)) {
+    await replyEphemerally(interaction, 'Only a server moderator (Manage Server) can reload an event post.');
+    return;
+  }
+
+  if (interaction.guild === null) {
+    await replyEphemerally(interaction, 'Run this inside the server, not from a DM.');
+    return;
+  }
+
+  // Looking up every attendee can take a few seconds on a big event.
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const summary = await refreshAllDisplayNames(context, interaction.guild, event);
+
+  await withMessageLock(event.message_id, () => refreshEventPanelNow(context, event.message_id));
+
+  if (event.cancelled || event.ended) {
+    await lockAndCloseThread(context, event.thread_id);
+  }
+
+  logger.info('event reloaded', {
+    messageId: event.message_id,
+    reloadedBy: interaction.user.id,
+    ...summary,
+  });
+
+  await interaction.editReply({ content: describeNameRefresh(summary) });
+}
+
 export async function handleEventCommand(
   context: AppContext,
   interaction: ChatInputCommandInteraction,
@@ -220,6 +285,9 @@ export async function handleEventCommand(
         return;
       case EVENT_SUBCOMMANDS.delete:
         await handleDeleteSubcommand(context, interaction);
+        return;
+      case EVENT_SUBCOMMANDS.reload:
+        await handleReloadSubcommand(context, interaction);
         return;
       default:
         await replyEphemerally(interaction, 'Unknown subcommand.');

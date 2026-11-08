@@ -7,6 +7,7 @@ export const EVENT_SUBCOMMANDS = {
   edit: 'edit',
   cancel: 'cancel',
   delete: 'delete',
+  reload: 'reload',
 } as const;
 
 /**
@@ -39,6 +40,11 @@ export function buildEventCommandDefinition() {
       subcommand
         .setName(EVENT_SUBCOMMANDS.delete)
         .setDescription('Admin only: erase this event and its post entirely, with no notice'),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName(EVENT_SUBCOMMANDS.reload)
+        .setDescription("Moderators only: refresh everyone's names and redraw this post"),
     )
     .toJSON();
 }
