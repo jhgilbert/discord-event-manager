@@ -6,11 +6,23 @@ import { describeError, logger } from '../lib/logger.js';
 import { startOfDay } from '../lib/start-of-day.js';
 
 /**
- * Tidying, not timekeeping: a post that closes a few hours late costs nothing,
- * so once a day is plenty. It also runs at every boot, which on Railway means
- * every deploy.
+ * A few seconds past midnight, so a clock running slightly fast cannot sweep
+ * just before it and leave yesterday's events open another whole day.
  */
-const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const PAST_MIDNIGHT_MS = 5 * 1000;
+
+/**
+ * Just after midnight in `TZ`, the moment an event's day is over, rather than
+ * 24 hours after boot: that left posts open until whatever time of day the bot
+ * last deployed. `setHours(24)` reads the process clock like `startOfDay`
+ * does, so a daylight-saving change still lands on midnight. It also runs at
+ * every boot, which on Railway means every deploy.
+ */
+function msUntilNextSweep(nowMs: number): number {
+  const nextMidnight = new Date(nowMs);
+  nextMidnight.setHours(24, 0, 0, 0);
+  return nextMidnight.getTime() - nowMs + PAST_MIDNIGHT_MS;
+}
 
 async function closePastEvent(context: AppContext, messageId: string, threadId: string): Promise<void> {
   await withMessageLock(messageId, async () => {
@@ -54,8 +66,18 @@ export function startPastEventJob(context: AppContext): () => void {
     });
   };
 
-  sweep();
-  const timer = setInterval(sweep, SWEEP_INTERVAL_MS);
+  // Rescheduled after each sweep rather than with setInterval, which would
+  // keep the time of day the bot happened to boot at.
+  let timer: NodeJS.Timeout;
+  const scheduleNext = () => {
+    timer = setTimeout(() => {
+      sweep();
+      scheduleNext();
+    }, msUntilNextSweep(Date.now()));
+  };
 
-  return () => clearInterval(timer);
+  sweep();
+  scheduleNext();
+
+  return () => clearTimeout(timer);
 }
