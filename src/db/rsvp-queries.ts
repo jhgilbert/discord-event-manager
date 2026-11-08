@@ -35,12 +35,18 @@ export function listWaitlistInJoinOrder(database: EventDatabase, messageId: stri
 
 export function insertRsvp(
   database: EventDatabase,
-  rsvp: { messageId: string; userId: string; plusOne: boolean; status: RsvpStatus },
+  rsvp: {
+    messageId: string;
+    userId: string;
+    displayName: string | null;
+    plusOne: boolean;
+    status: RsvpStatus;
+  },
 ): void {
   database
     .prepare(
-      `INSERT INTO rsvps (message_id, user_id, plus_one, status, created_at)
-       VALUES (@messageId, @userId, @plusOne, @status, @createdAt)`,
+      `INSERT INTO rsvps (message_id, user_id, display_name, plus_one, status, created_at)
+       VALUES (@messageId, @userId, @displayName, @plusOne, @status, @createdAt)`,
     )
     .run({ ...rsvp, plusOne: rsvp.plusOne ? 1 : 0, createdAt: Math.floor(Date.now() / 1000) });
 }
@@ -69,6 +75,17 @@ export function promoteRsvpToConfirmed(
   database
     .prepare(`UPDATE rsvps SET status = 'confirmed' WHERE message_id = ? AND user_id = ?`)
     .run(messageId, userId);
+}
+
+export function updateRsvpDisplayName(
+  database: EventDatabase,
+  messageId: string,
+  userId: string,
+  displayName: string,
+): void {
+  database
+    .prepare('UPDATE rsvps SET display_name = ? WHERE message_id = ? AND user_id = ?')
+    .run(displayName, messageId, userId);
 }
 
 export function deleteRsvp(database: EventDatabase, messageId: string, userId: string): void {

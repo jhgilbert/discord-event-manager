@@ -27,6 +27,10 @@ this file covers how the code is arranged.
   the **+1 settings** button on the reply to create or edit. Until then *RSVP
   +1* is greyed out and the line above the buttons says why. Turning +1s off
   later only stops new ones: a guest already on the list is never removed.
+- **Names** — the roster shows server nicknames as plain text, not mentions.
+  A mention inside an embed shows up as a raw user ID on any client that
+  hasn't loaded that user yet, which is common on mobile. Names are picked up
+  on every click; RSVPs from before this are looked up once at the next render.
 - **Capacity** — one number, total headcount. A guest takes a seat exactly as a
   member does, and so does the host.
 - **Waitlist** — strict FIFO, promoted automatically when room appears, with an
@@ -78,6 +82,8 @@ src/
     refresh-event-panel.ts  re-render, unarchive, debounce
     forum-tags.ts      Open / Full / Canceled
     announcements.ts   in-thread pings
+    display-names.ts   names instead of mentions on the panel
+    backfill-display-names.ts  one-time lookups for RSVPs with no name
     event-edit-notice.ts   the "what changed" message
     plus-one-settings-modal.ts  the +1 settings button and form
     plus-one-copy.ts   how the +1 rule is worded

@@ -25,6 +25,7 @@ import {
   readEventModalTarget,
   type EventModalTarget,
 } from '../discord/custom-ids.js';
+import { readDisplayName } from '../discord/display-names.js';
 import { readEventFormFromModal } from '../discord/event-modal.js';
 import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { buildEventThreadName } from '../discord/event-thread-name.js';
@@ -83,7 +84,12 @@ async function createEventFromForm(
     return;
   }
 
-  const published = await publishNewEvent(context, interaction.user.id, guildId, details);
+  const published = await publishNewEvent(
+    context,
+    { userId: interaction.user.id, displayName: readDisplayName(interaction) },
+    guildId,
+    details,
+  );
 
   logger.info('event created', {
     messageId: published.messageId,

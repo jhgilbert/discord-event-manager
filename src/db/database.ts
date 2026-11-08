@@ -58,6 +58,8 @@ export function openDatabase(databasePath: string): EventDatabase {
   addColumnIfMissing(database, 'events', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(database, 'events', 'plus_ones_allowed_from', 'INTEGER DEFAULT 0');
   addColumnIfMissing(database, 'events', 'plus_one_unlock_pending', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(database, 'events', 'host_display_name', 'TEXT');
+  addColumnIfMissing(database, 'rsvps', 'display_name', 'TEXT');
   database.exec(POST_MIGRATION_STATEMENTS);
 
   logger.info('database ready', { databasePath });

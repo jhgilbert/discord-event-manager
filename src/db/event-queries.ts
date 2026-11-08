@@ -7,6 +7,7 @@ export type NewEvent = EventDetails & {
   threadId: string;
   guildId: string;
   hostId: string;
+  hostDisplayName: string | null;
 };
 
 /**
@@ -18,9 +19,9 @@ function insertEvent(database: EventDatabase, event: NewEvent): void {
   database
     .prepare(
       `INSERT INTO events
-         (message_id, thread_id, guild_id, host_id, title, description, location, starts_at, capacity, created_at, plus_ones_allowed_from)
+         (message_id, thread_id, guild_id, host_id, title, description, location, starts_at, capacity, created_at, plus_ones_allowed_from, host_display_name)
        VALUES
-         (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity, @createdAt, NULL)`,
+         (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity, @createdAt, NULL, @hostDisplayName)`,
     )
     .run({ ...event, createdAt: Math.floor(Date.now() / 1000) });
 }
@@ -41,6 +42,7 @@ export function insertEventAndSeatHost(database: EventDatabase, event: NewEvent)
     insertRsvp(database, {
       messageId: event.messageId,
       userId: event.hostId,
+      displayName: event.hostDisplayName,
       plusOne: false,
       status: 'confirmed',
     });
@@ -81,6 +83,16 @@ export function updateEventDetails(
  */
 export function clearReminderSent(database: EventDatabase, messageId: string): void {
   database.prepare('UPDATE events SET reminder_sent = 0 WHERE message_id = ?').run(messageId);
+}
+
+export function updateHostDisplayName(
+  database: EventDatabase,
+  messageId: string,
+  displayName: string,
+): void {
+  database
+    .prepare('UPDATE events SET host_display_name = ? WHERE message_id = ?')
+    .run(displayName, messageId);
 }
 
 export function markEventCancelled(database: EventDatabase, messageId: string): void {

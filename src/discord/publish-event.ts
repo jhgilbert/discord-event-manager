@@ -13,7 +13,7 @@ import { chooseStateTagName, resolveStateTagId } from './forum-tags.js';
  * ID filled in afterwards.
  */
 function buildUnpublishedEventRow(
-  hostId: string,
+  host: EventHost,
   guildId: string,
   details: EventDetails,
 ): EventRow {
@@ -21,7 +21,7 @@ function buildUnpublishedEventRow(
     message_id: '',
     thread_id: '',
     guild_id: guildId,
-    host_id: hostId,
+    host_id: host.userId,
     title: details.title,
     description: details.description,
     location: details.location,
@@ -35,6 +35,7 @@ function buildUnpublishedEventRow(
     // Matches what insertEvent stores: a new event starts with +1s off.
     plus_ones_allowed_from: null,
     plus_one_unlock_pending: 0,
+    host_display_name: host.displayName,
   };
 }
 
@@ -44,14 +45,20 @@ function buildUnpublishedEventRow(
  * being created. Rendering reads neither ID nor timestamp; the stored row is
  * written by insertEventAndSeatHost, so the two cannot drift.
  */
-function buildHostRsvpRow(hostId: string): RsvpRow {
+function buildHostRsvpRow(host: EventHost): RsvpRow {
   return {
     message_id: '',
-    user_id: hostId,
+    user_id: host.userId,
     plus_one: 0,
     status: 'confirmed',
     created_at: 0,
+    display_name: host.displayName,
   };
+}
+
+export interface EventHost {
+  userId: string;
+  displayName: string;
 }
 
 export interface PublishedEvent {
@@ -66,12 +73,12 @@ export interface PublishedEvent {
  */
 export async function publishNewEvent(
   context: AppContext,
-  hostId: string,
+  host: EventHost,
   guildId: string,
   details: EventDetails,
 ): Promise<PublishedEvent> {
-  const event = buildUnpublishedEventRow(hostId, guildId, details);
-  const hostRsvp = buildHostRsvpRow(hostId);
+  const event = buildUnpublishedEventRow(host, guildId, details);
+  const hostRsvp = buildHostRsvpRow(host);
 
   // A capacity of one is full the moment the host takes their seat, so the
   // opening tag is chosen rather than assumed.
@@ -93,7 +100,8 @@ export async function publishNewEvent(
     messageId: thread.id,
     threadId: thread.id,
     guildId,
-    hostId,
+    hostId: host.userId,
+    hostDisplayName: host.displayName,
     ...details,
   });
 

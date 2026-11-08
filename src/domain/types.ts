@@ -24,6 +24,7 @@ export interface EventRow {
   /** See domain/plus-one-policy.ts — read through `readPlusOnePolicy`. */
   plus_ones_allowed_from: number | null;
   plus_one_unlock_pending: number;
+  host_display_name: string | null;
 }
 
 export interface RsvpRow {
@@ -32,6 +33,8 @@ export interface RsvpRow {
   plus_one: number;
   status: RsvpStatus;
   created_at: number;
+  /** Null for RSVPs from before names were stored, until a lookup fills it in. */
+  display_name: string | null;
 }
 
 /** The fields the host controls through the modal, in both create and edit. */

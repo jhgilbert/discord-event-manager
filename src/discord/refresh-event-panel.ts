@@ -3,6 +3,7 @@ import type { AppContext } from '../context.js';
 import { findEventByMessageId } from '../db/event-queries.js';
 import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
 import { summarizeCapacity } from '../domain/capacity.js';
+import { fillInMissingDisplayNames } from './backfill-display-names.js';
 import { applyStateTag, chooseStateTagName } from './forum-tags.js';
 import { renderEventPanel } from './event-panel.js';
 import { describeError, logger } from '../lib/logger.js';
@@ -51,18 +52,22 @@ export async function refreshEventPanelNow(
 }
 
 async function writeEventPanel(context: AppContext, messageId: string): Promise<void> {
-  const event = findEventByMessageId(context.database, messageId);
-  if (event === null) {
+  const storedEvent = findEventByMessageId(context.database, messageId);
+  if (storedEvent === null) {
     return;
   }
 
-  const thread = await fetchEventThread(context, event.thread_id);
+  const thread = await fetchEventThread(context, storedEvent.thread_id);
   if (thread === null) {
     logger.warn('event thread is gone; skipping panel refresh', { messageId });
     return;
   }
 
   await ensureThreadIsEditable(thread);
+  await fillInMissingDisplayNames(context, thread.guild, storedEvent);
+
+  // Re-read so the host name the lookups just stored makes this render.
+  const event = findEventByMessageId(context.database, messageId) ?? storedEvent;
 
   const confirmed = listConfirmedInJoinOrder(context.database, messageId);
   const waiting = listWaitlistInJoinOrder(context.database, messageId);

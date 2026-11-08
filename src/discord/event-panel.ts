@@ -8,6 +8,7 @@ import {
 import { RSVP_BUTTON_IDS } from './custom-ids.js';
 import { summarizeCapacity } from '../domain/capacity.js';
 import { arePlusOnesOpen, readPlusOnePolicy } from '../domain/plus-one-policy.js';
+import { formatPersonForPanel } from './display-names.js';
 import { describePlusOnePolicyLine } from './plus-one-copy.js';
 import type { EventRow, RsvpRow } from '../domain/types.js';
 
@@ -22,7 +23,7 @@ const COLOUR_FULL = 0xe67e22;
 const COLOUR_CANCELLED = 0x99aab5;
 
 function formatAttendeeLine(rsvp: RsvpRow): string {
-  return `<@${rsvp.user_id}>${rsvp.plus_one ? ' **+1**' : ''}`;
+  return `${formatPersonForPanel(rsvp.user_id, rsvp.display_name)}${rsvp.plus_one ? ' **+1**' : ''}`;
 }
 
 function formatWaitlistLine(rsvp: RsvpRow, index: number): string {
@@ -64,13 +65,9 @@ function describeSpots(event: EventRow, confirmed: RsvpRow[]): string {
   return isOverSubscribed ? `${line} — over capacity` : line;
 }
 
-/**
- * A mention rather than a name: it renders as whatever nickname the viewer sees,
- * survives a rename, and is clickable. Mentions inside an embed never notify
- * anyone, so this cannot ping the host every time the panel re-renders.
- */
+/** A name rather than a mention, for the reason in display-names.ts. */
 function buildHostField(event: EventRow): APIEmbedField {
-  return { name: 'Host', value: `<@${event.host_id}>` };
+  return { name: 'Host', value: formatPersonForPanel(event.host_id, event.host_display_name) };
 }
 
 function buildWhenField(event: EventRow): APIEmbedField {

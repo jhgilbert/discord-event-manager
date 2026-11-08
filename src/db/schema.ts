@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS events (
   -- as they did; new events always write it explicitly. See plus-one-policy.ts.
   plus_ones_allowed_from  INTEGER DEFAULT 0,
   -- 1 while the panel still shows a +1 button that a future date will unlock.
-  plus_one_unlock_pending INTEGER NOT NULL DEFAULT 0
+  plus_one_unlock_pending INTEGER NOT NULL DEFAULT 0,
+  host_display_name       TEXT      -- see rsvps.display_name
 );
 
 CREATE TABLE IF NOT EXISTS rsvps (
@@ -32,6 +33,9 @@ CREATE TABLE IF NOT EXISTS rsvps (
   plus_one   INTEGER NOT NULL DEFAULT 0,
   status     TEXT    NOT NULL,      -- 'confirmed' | 'waitlist'
   created_at INTEGER NOT NULL,      -- never updated on promotion
+  -- Server nickname, refreshed on every click. NULL until known; the panel
+  -- then falls back to a mention. See discord/display-names.ts.
+  display_name TEXT,
   PRIMARY KEY (message_id, user_id)
 );
 

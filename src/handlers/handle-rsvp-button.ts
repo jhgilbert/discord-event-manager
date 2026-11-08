@@ -1,13 +1,14 @@
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import type { AppContext } from '../context.js';
 import type { EventDatabase } from '../db/database.js';
-import { findEventByMessageId } from '../db/event-queries.js';
+import { findEventByMessageId, updateHostDisplayName } from '../db/event-queries.js';
 import {
   deleteRsvp,
   findRsvp,
   insertRsvp,
   listConfirmedInJoinOrder,
   listWaitlistInJoinOrder,
+  updateRsvpDisplayName,
   updateRsvpPlusOne,
 } from '../db/rsvp-queries.js';
 import { summarizeCapacity } from '../domain/capacity.js';
@@ -16,6 +17,7 @@ import { reconcileEvent } from '../domain/reconcile.js';
 import { decideRsvpOutcome, type RsvpDecision } from '../domain/rsvp-decision.js';
 import { readRsvpButtonAction, type RsvpButtonAction } from '../discord/custom-ids.js';
 import { announcePromotedFromWaitlist } from '../discord/announcements.js';
+import { readDisplayName } from '../discord/display-names.js';
 import { describeWhyPlusOnesAreClosed } from '../discord/plus-one-copy.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
@@ -102,6 +104,7 @@ function applyDecisionToDatabase(
   database: EventDatabase,
   messageId: string,
   userId: string,
+  displayName: string,
   decision: RsvpDecision,
 ): void {
   if (
@@ -116,7 +119,7 @@ function applyDecisionToDatabase(
   const status = decision.kind === 'seat' ? 'confirmed' : 'waitlist';
 
   if (existing === null) {
-    insertRsvp(database, { messageId, userId, plusOne: decision.plusOne, status });
+    insertRsvp(database, { messageId, userId, displayName, plusOne: decision.plusOne, status });
     return;
   }
 
@@ -129,6 +132,7 @@ function handleGoingClick(
   context: AppContext,
   messageId: string,
   userId: string,
+  displayName: string,
   requestedPlusOne: boolean,
 ): Omit<RsvpClickOutcome, 'threadId'> {
   const { database } = context;
@@ -170,7 +174,7 @@ function handleGoingClick(
     };
   }
 
-  applyDecisionToDatabase(database, messageId, userId, decision);
+  applyDecisionToDatabase(database, messageId, userId, displayName, decision);
   const promotedUserIds = reconcileEvent(database, messageId);
 
   return {
@@ -206,10 +210,30 @@ function handleWithdrawClick(
  * re-render, with no other click for this message interleaving. Two people
  * taking the last seat at once is exactly what this prevents.
  */
+/**
+ * Any click is a free chance to pick up a changed nickname — including a
+ * refused one, and including the host's, whose name is also shown on its own
+ * in the Host field. For someone not yet on the list there is no row to update;
+ * the insert writes their name instead.
+ */
+function refreshStoredDisplayName(
+  context: AppContext,
+  event: { message_id: string; host_id: string },
+  userId: string,
+  displayName: string,
+): void {
+  updateRsvpDisplayName(context.database, event.message_id, userId, displayName);
+
+  if (event.host_id === userId) {
+    updateHostDisplayName(context.database, event.message_id, displayName);
+  }
+}
+
 async function processRsvpClick(
   context: AppContext,
   messageId: string,
   userId: string,
+  displayName: string,
   action: RsvpButtonAction,
 ): Promise<RsvpClickOutcome> {
   return withMessageLock(messageId, async () => {
@@ -231,10 +255,12 @@ async function processRsvpClick(
       };
     }
 
+    refreshStoredDisplayName(context, event, userId, displayName);
+
     const result =
       action === 'withdraw'
         ? handleWithdrawClick(context, messageId, userId)
-        : handleGoingClick(context, messageId, userId, action === 'going-plus-one');
+        : handleGoingClick(context, messageId, userId, displayName, action === 'going-plus-one');
 
     await refreshEventPanel(context, messageId);
     return { ...result, threadId: event.thread_id };
@@ -257,7 +283,13 @@ export async function handleRsvpButton(
   const messageId = interaction.message.id;
 
   try {
-    const outcome = await processRsvpClick(context, messageId, interaction.user.id, action);
+    const outcome = await processRsvpClick(
+      context,
+      messageId,
+      interaction.user.id,
+      readDisplayName(interaction),
+      action,
+    );
 
     await interaction.followUp({
       content: outcome.ephemeralMessage,
