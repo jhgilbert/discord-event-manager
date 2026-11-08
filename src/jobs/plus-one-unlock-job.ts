@@ -6,8 +6,11 @@ import {
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { describeError, logger } from '../lib/logger.js';
 
-/** The date is a whole day, so a minute late is invisible. */
-const SWEEP_INTERVAL_MS = 60_000;
+/**
+ * The date is a whole day, so the button opening up to an hour after midnight
+ * goes unnoticed — and a click on the post before then redraws it anyway.
+ */
+const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
  * The panel is only re-rendered when something happens to the event, and the

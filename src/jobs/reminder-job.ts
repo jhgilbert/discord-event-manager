@@ -6,10 +6,11 @@ import { isReservedSeat } from '../domain/reserved-seats.js';
 import { describeError, logger } from '../lib/logger.js';
 
 /**
- * A minute of granularity is plenty for a reminder measured in hours, and the
- * query is one index scan, so this costs nothing to run forever.
+ * A reminder posted up to 15 minutes late is invisible at a lead measured in
+ * hours (the default is a day). A lead shorter than about an hour would want
+ * this tightened.
  */
-const SWEEP_INTERVAL_MS = 60_000;
+const SWEEP_INTERVAL_MS = 15 * 60 * 1000;
 
 /**
  * An event posted for tonight, with the reminder set to the day before, was

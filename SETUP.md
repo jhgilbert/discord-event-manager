@@ -235,7 +235,9 @@ Notes:
   `1440` is the day before; `60` is an hour before. Anything from 1 minute to
   10080 (a week) is accepted, and changing it takes effect on the next deploy
   with no migration — the value is read at sweep time, not stored per event.
-  Confirmed attendees are pinged; the waitlist is not.
+  Confirmed attendees are pinged; the waitlist is not. The bot checks every 15
+  minutes, so a reminder can land up to 15 minutes after its exact time —
+  unnoticeable at a lead of hours, but worth knowing if you set it very short.
 
   Events created *inside* the window — posted for tonight when the lead is a
   day — get no reminder, deliberately. The post itself is the notice, and a

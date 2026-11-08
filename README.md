@@ -106,7 +106,7 @@ src/
   handlers/            one file per interaction, plus a router
   commands/            slash command definition and registration
   jobs/
-    reminder-job.ts    the once-a-minute reminder sweep
+    reminder-job.ts    the every-15-minutes reminder sweep
     plus-one-unlock-job.ts  re-renders a panel when its +1 date arrives
     past-event-job.ts  the daily sweep that locks and closes past events
 ```

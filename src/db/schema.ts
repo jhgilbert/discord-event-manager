@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS rsvps (
 CREATE INDEX IF NOT EXISTS rsvps_by_event_order
   ON rsvps (message_id, status, created_at);
 
--- The reminder sweep runs once a minute forever, so it should never scan the
--- full events table.
+-- The reminder sweep runs every 15 minutes forever, so it should never scan
+-- the full events table.
 CREATE INDEX IF NOT EXISTS events_pending_reminders
   ON events (reminder_sent, starts_at);
 `;
@@ -62,7 +62,7 @@ CREATE INDEX IF NOT EXISTS events_pending_reminders
  * so they have to run after it rather than with the statements above.
  */
 export const POST_MIGRATION_STATEMENTS = `
--- The +1 unlock sweep runs once a minute too, and almost never finds anything.
+-- The +1 unlock sweep runs hourly, and almost never finds anything.
 CREATE INDEX IF NOT EXISTS events_pending_plus_one_unlocks
   ON events (plus_one_unlock_pending, plus_ones_allowed_from);
 `;
