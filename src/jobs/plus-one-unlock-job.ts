@@ -3,6 +3,7 @@ import {
   clearPlusOneUnlockPending,
   findEventsDueForPlusOneUnlock,
 } from '../db/event-queries.js';
+import { announcePlusOnesOpen } from '../discord/announcements.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { describeError, logger } from '../lib/logger.js';
 
@@ -18,9 +19,14 @@ const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
  * button would stay greyed out long after it should have opened. This is the
  * render nothing else would trigger.
  *
- * Cleared *after* the render, the opposite of the reminder sweep: a render is
- * safe to repeat, so a crash in between costs one redundant edit, where
- * clearing first could leave the button locked for good.
+ * Cleared *after* the render, so a crash in between costs one redundant edit
+ * rather than a button locked for good — but *before* the thread message, so
+ * a crash there costs a missed message rather than a duplicate one. The same
+ * at-most-once trade the reminder sweep makes.
+ *
+ * The message pings nobody: everyone who RSVPed is a member of the thread
+ * (see thread-membership.ts), so it reaches them according to their own
+ * settings for it.
  */
 export async function runPlusOneUnlockSweep(context: AppContext): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
@@ -28,6 +34,7 @@ export async function runPlusOneUnlockSweep(context: AppContext): Promise<void> 
   for (const event of findEventsDueForPlusOneUnlock(context.database, now)) {
     await refreshEventPanel(context, event.message_id);
     clearPlusOneUnlockPending(context.database, event.message_id);
+    await announcePlusOnesOpen(context, event.thread_id);
     logger.info('unlocked plus-ones on event panel', { messageId: event.message_id });
   }
 }

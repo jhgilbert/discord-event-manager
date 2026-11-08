@@ -17,9 +17,12 @@ import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
 import { isHostOrServerManager } from '../discord/event-permissions.js';
 import {
+  isKnownToBeGone,
+  listDiscordMembersOnTheEvent,
   refreshAllDisplayNames,
   type NameRefreshSummary,
 } from '../discord/backfill-display-names.js';
+import { addMembersToEventThread } from '../discord/thread-membership.js';
 import { announceEventCancelled } from '../discord/announcements.js';
 import { lockAndCloseThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
@@ -207,8 +210,13 @@ async function handleDeleteSubcommand(
   });
 }
 
-function describeNameRefresh(summary: NameRefreshSummary): string {
+function describeReload(summary: NameRefreshSummary, addedToThread: number | null): string {
   const parts = [`${summary.updated} ${summary.updated === 1 ? 'name' : 'names'} refreshed`];
+
+  if (addedToThread !== null) {
+    const people = addedToThread === 1 ? '1 person' : `${addedToThread} people`;
+    parts.push(`${people} on the list added to the thread, so they get its messages`);
+  }
 
   if (summary.gone > 0) {
     parts.push(
@@ -226,6 +234,11 @@ function describeNameRefresh(summary: NameRefreshSummary): string {
  * Works on canceled and past posts too, since those are exactly the ones nobody
  * clicks any more. Redrawing has to reopen the thread to edit it, so a closed
  * post is locked and closed again afterwards.
+ *
+ * On an open event it also adds everyone on the list to the thread, which a
+ * click now does on its own (see thread-membership.ts) but did not for RSVPs
+ * made before that. A closed event has nothing left to tell them, so it skips
+ * that step.
  */
 async function handleReloadSubcommand(
   context: AppContext,
@@ -255,17 +268,27 @@ async function handleReloadSubcommand(
 
   await withMessageLock(event.message_id, () => refreshEventPanelNow(context, event.message_id));
 
-  if (event.cancelled || event.ended) {
+  const isClosed = Boolean(event.cancelled || event.ended);
+  const addedToThread = isClosed
+    ? null
+    : await addMembersToEventThread(
+        context,
+        event.thread_id,
+        listDiscordMembersOnTheEvent(context, event).filter((userId) => !isKnownToBeGone(userId)),
+      );
+
+  if (isClosed) {
     await lockAndCloseThread(context, event.thread_id);
   }
 
   logger.info('event reloaded', {
     messageId: event.message_id,
     reloadedBy: interaction.user.id,
+    addedToThread,
     ...summary,
   });
 
-  await interaction.editReply({ content: describeNameRefresh(summary) });
+  await interaction.editReply({ content: describeReload(summary, addedToThread) });
 }
 
 export async function handleEventCommand(

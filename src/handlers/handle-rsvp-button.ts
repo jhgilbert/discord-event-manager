@@ -19,6 +19,7 @@ import { decideRsvpOutcome, type RsvpDecision } from '../domain/rsvp-decision.js
 import { readRsvpButtonAction, type RsvpButtonAction } from '../discord/custom-ids.js';
 import { announcePromotedFromWaitlist } from '../discord/announcements.js';
 import { readDisplayName } from '../discord/display-names.js';
+import { addToEventThread } from '../discord/thread-membership.js';
 import { describeWhyPlusOnesAreClosed } from '../discord/plus-one-copy.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
@@ -26,6 +27,8 @@ import { describeError, logger } from '../lib/logger.js';
 
 interface RsvpClickOutcome {
   ephemeralMessage: string;
+  /** True when this click put them on the list, seated or queued, for the first time. */
+  joinedTheList?: boolean;
   promoted: RsvpRow[];
   threadId: string | null;
 }
@@ -180,6 +183,7 @@ function handleGoingClick(
 
   return {
     ephemeralMessage: describeFinalRsvpState(database, messageId, userId, plusOnesOpen),
+    joinedTheList: existing === null,
     promoted,
   };
 }
@@ -307,6 +311,12 @@ export async function handleRsvpButton(
 
     if (outcome.threadId !== null) {
       await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promoted);
+    }
+
+    // Only on joining, not on every click: membership is permanent until they
+    // leave, so once is enough.
+    if (outcome.threadId !== null && outcome.joinedTheList === true) {
+      await addToEventThread(context, outcome.threadId, interaction.user.id);
     }
   } catch (error: unknown) {
     logger.error('rsvp click failed', {

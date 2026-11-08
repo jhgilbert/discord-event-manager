@@ -138,6 +138,16 @@ export async function announcePromotedFromWaitlist(
   }
 }
 
+/** Posted by the +1 unlock sweep when a host's "allowed on or after" date arrives. */
+export async function announcePlusOnesOpen(context: AppContext, threadId: string): Promise<void> {
+  await postNoticeInEventThread(
+    context,
+    threadId,
+    () => "+1s are now allowed for this event. Tap **RSVP +1** on the post to bring a guest — if you're already going, it adds one to your RSVP while there's room.",
+    [],
+  );
+}
+
 export async function announceEventCancelled(
   context: AppContext,
   threadId: string,

@@ -323,7 +323,9 @@ ping. If the host drops out, their reserved seats stay.
 any leftover user IDs and picks up changed nicknames. It is never needed for the
 post to work, so it is kept for administrators rather than every host. On a canceled
 or past post the bot reopens it to redraw and then locks and closes it again;
-administrators can run commands in a locked post.
+administrators can run commands in a locked post. On an open post it also adds
+everyone on the list to the thread, which catches up RSVPs made before the bot
+started doing that on each click.
 
 **Every edit posts what changed, in the event's own thread** — including the
 host's own edits, and including a change made by an admin. The notice names who

@@ -22,11 +22,14 @@ this file covers how the code is arranged.
 - **Host** — named on the panel in its own field, and RSVPed automatically when
   the event is created. They can still withdraw with *Cancel RSVP*. The
   first reply in the thread pings the host with how to edit or cancel.
-- **RSVP** — three buttons: *RSVP*, *RSVP +1*, *Cancel RSVP*.
+- **RSVP** — three buttons: *RSVP*, *RSVP +1*, *Cancel RSVP*. RSVPing adds
+  you to the post's thread, so its messages reach you (by your own
+  notification settings for it). Cancelling does not remove you.
 - **+1s** — off by default. The host turns them on, now or from a date, with
   `/event plus-ones` in the post, or the **+1 settings** button on the reply to
   create or edit. Until then *RSVP
-  +1* is greyed out and the line above the buttons says why. Turning +1s off
+  +1* is greyed out and the line above the buttons says why; when the date
+  arrives, the thread gets a message saying +1s are open. Turning +1s off
   later only stops new ones: a guest already on the list is never removed.
 - **Names** — the roster shows server nicknames as plain text, not mentions.
   A mention inside an embed shows up as a raw user ID on any client that
@@ -52,7 +55,9 @@ this file covers how the code is arranged.
   seat is pinged instead: on promotion, a moved time or place, or cancellation.
   Reminders skip reserved seats. The seat stays if the host drops out.
 - **Reload** — `/event reload` inside the post, **server administrators only**. Looks up every attendee's current server nickname
-  and redraws the post. Works on canceled and past posts, which it re-closes.
+  and redraws the post. On an open event it also adds everyone on the list to
+  the thread, for RSVPs from before that happened automatically. Works on
+  canceled and past posts, which it re-closes.
 - **Reminders** — posted in-thread to confirmed attendees, `REMINDER_LEAD_MINUTES`
   before the start (1440 = the day before). Events posted at shorter notice than
   the lead skip the reminder: the post is the notice.

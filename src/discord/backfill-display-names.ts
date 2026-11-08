@@ -33,6 +33,11 @@ const LOOKUPS_PER_RENDER = 25;
  */
 const userIdsThatAreGone = new Set<string>();
 
+/** So `/event reload` does not try to add someone to the thread who has left. */
+export function isKnownToBeGone(userId: string): boolean {
+  return userIdsThatAreGone.has(userId);
+}
+
 function isGoneForGood(error: unknown): boolean {
   return (
     error instanceof DiscordAPIError &&
@@ -116,8 +121,11 @@ export interface NameRefreshSummary {
   failed: number;
 }
 
-/** Reserved seats are left out: the host typed that name, and it has no member to look up. */
-function listEveryoneOnTheEvent(context: AppContext, event: EventRow): string[] {
+/**
+ * The host and every Discord member with an RSVP. Reserved seats are left out:
+ * the host typed that name, and it has no member to look up or add.
+ */
+export function listDiscordMembersOnTheEvent(context: AppContext, event: EventRow): string[] {
   const discordMembers = [
     ...listConfirmedInJoinOrder(context.database, event.message_id),
     ...listWaitlistInJoinOrder(context.database, event.message_id),
@@ -138,7 +146,7 @@ export async function refreshAllDisplayNames(
 ): Promise<NameRefreshSummary> {
   const summary: NameRefreshSummary = { updated: 0, gone: 0, failed: 0 };
 
-  for (const userId of listEveryoneOnTheEvent(context, event)) {
+  for (const userId of listDiscordMembersOnTheEvent(context, event)) {
     const result = await lookUpAndStoreName(context, guild, event, userId, true);
     summary[result === 'stored' ? 'updated' : result] += 1;
   }

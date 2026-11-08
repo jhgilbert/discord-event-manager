@@ -11,6 +11,12 @@ Notable changes to the bot, newest first. The format follows
 - **`/event plus-ones`** opens the +1 settings from inside the event's post,
   for a host who dismissed the reply with the **+1 settings** button. The host
   instructions in each new thread mention it.
+- **RSVPing adds you to the event's thread,** so messages there reach you
+  according to your own notification settings for it. Cancelling an RSVP does
+  not remove you. `/event reload` adds everyone already on an open event.
+- **The thread is told when +1s open.** When a host's "allowed on or after"
+  date arrives, the bot posts a message (no pings) saying guests are now
+  allowed.
 
 ### Changed
 
