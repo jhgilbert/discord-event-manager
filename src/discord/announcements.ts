@@ -98,7 +98,7 @@ export async function postHostInstructions(
     threadId,
     (mentions) =>
       [
-        `${mentions} — you're the host. To manage this event, type these right here in this post:`,
+        `${mentions} — you're the host. To manage this event, type one of these commands as a reply on this post:`,
         '· `/event edit` — change the title, time, place, details or spots. Attendees are pinged if the time or place moves.',
         '· `/event cancel` — call it off. Everyone who RSVPed is notified and the post is locked.',
       ].join('\n'),
