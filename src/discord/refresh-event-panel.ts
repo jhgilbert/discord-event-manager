@@ -27,6 +27,26 @@ export async function fetchEventThread(
   return channel !== null && channel.isThread() ? channel : null;
 }
 
+/**
+ * For an event that is over: canceled, or past. Locked so the post stops
+ * collecting replies — any message would reopen it — then closed so it moves
+ * to the forum's Older Posts. Locking first: archiving can require an
+ * unarchive round trip to make further changes.
+ */
+export async function lockAndCloseThread(context: AppContext, threadId: string): Promise<void> {
+  const thread = await fetchEventThread(context, threadId);
+  if (thread === null) {
+    return;
+  }
+
+  try {
+    await thread.setLocked(true);
+    await thread.setArchived(true);
+  } catch (error: unknown) {
+    logger.warn('could not lock or close the event thread', { threadId, ...describeError(error) });
+  }
+}
+
 async function fetchStarterMessage(thread: ThreadChannel): Promise<Message | null> {
   // For a forum post the starter message shares the thread's ID, so this is a
   // direct fetch rather than a search.
@@ -35,7 +55,8 @@ async function fetchStarterMessage(thread: ThreadChannel): Promise<Message | nul
 
 /**
  * Bypasses the debounce below. Used where the render must land before the next
- * step — cancellation, which archives the thread immediately afterwards.
+ * step — cancellation and the past-event sweep, which close the thread
+ * immediately afterwards.
  */
 export async function refreshEventPanelNow(
   context: AppContext,

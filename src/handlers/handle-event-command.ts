@@ -15,7 +15,7 @@ import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
 import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { announceEventCancelled } from '../discord/announcements.js';
-import { fetchEventThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
+import { lockAndCloseThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
 import { describeError, logger } from '../lib/logger.js';
 
@@ -81,6 +81,11 @@ async function handleEditSubcommand(
     return;
   }
 
+  if (event.ended) {
+    await replyEphemerally(interaction, 'This event has already happened and can no longer be edited.');
+    return;
+  }
+
   // The same modal as create, prefilled from the database — built by one
   // function so the two forms cannot drift apart.
   await interaction.showModal(
@@ -89,26 +94,6 @@ async function handleEditSubcommand(
       buildPrefillFromEvent(event, context.environment.TZ),
     ),
   );
-}
-
-async function lockAndArchiveThread(context: AppContext, threadId: string): Promise<void> {
-  const thread = await fetchEventThread(context, threadId);
-  if (thread === null) {
-    return;
-  }
-
-  try {
-    // Locked so the post stops collecting replies, then archived so it drops
-    // out of the active list. Locking first: archiving can require an
-    // unarchive round trip to make further changes.
-    await thread.setLocked(true);
-    await thread.setArchived(true);
-  } catch (error: unknown) {
-    logger.warn('could not lock or archive the canceled event thread', {
-      threadId,
-      ...describeError(error),
-    });
-  }
 }
 
 async function handleCancelSubcommand(
@@ -132,6 +117,11 @@ async function handleCancelSubcommand(
     return;
   }
 
+  if (event.ended) {
+    await replyEphemerally(interaction, 'This event has already happened, so there is nothing to cancel.');
+    return;
+  }
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const everyoneToNotify = await withMessageLock(event.message_id, async () => {
@@ -151,7 +141,7 @@ async function handleCancelSubcommand(
   });
 
   await announceEventCancelled(context, event.thread_id, everyoneToNotify, event.title);
-  await lockAndArchiveThread(context, event.thread_id);
+  await lockAndCloseThread(context, event.thread_id);
 
   logger.info('event cancelled', {
     messageId: event.message_id,

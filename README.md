@@ -46,6 +46,10 @@ this file covers how the code is arranged.
 - **Reminders** — posted in-thread to confirmed attendees, `REMINDER_LEAD_MINUTES`
   before the start (1440 = the day before). Events posted at shorter notice than
   the lead skip the reminder: the post is the notice.
+- **Past events** — once a day (and at every restart) the bot finds events whose
+  day is over, disables their buttons, and locks and closes the post. Closed
+  posts move to the forum's *Older Posts*, on desktop and mobile, so there is
+  no need to delete them.
 
 ## Stack
 
@@ -95,6 +99,7 @@ src/
   jobs/
     reminder-job.ts    the once-a-minute reminder sweep
     plus-one-unlock-job.ts  re-renders a panel when its +1 date arrives
+    past-event-job.ts  the daily sweep that locks and closes past events
 ```
 
 The dependency direction is one-way: `domain/` imports nothing from `discord/`.

@@ -13,6 +13,7 @@ import { fetchForumChannel, fetchTextChannel } from './discord/channels.js';
 import { warnAboutMissingStateTags } from './discord/forum-tags.js';
 import { ensureNewEventPanelExists } from './discord/event-builder-panel.js';
 import { handleInteraction } from './handlers/handle-interaction.js';
+import { startPastEventJob } from './jobs/past-event-job.js';
 import { startPlusOneUnlockJob } from './jobs/plus-one-unlock-job.js';
 import { startReminderJob } from './jobs/reminder-job.js';
 import type { AppContext } from './context.js';
@@ -134,7 +135,11 @@ async function startBot(): Promise<void> {
           void handleInteraction(context, interaction);
         });
 
-        stopJobs.push(startReminderJob(context), startPlusOneUnlockJob(context));
+        stopJobs.push(
+          startReminderJob(context),
+          startPlusOneUnlockJob(context),
+          startPastEventJob(context),
+        );
 
         logger.info('bot ready', {
           user: readyClient.user.tag,

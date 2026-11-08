@@ -1,6 +1,7 @@
 import * as chrono from 'chrono-node';
 import { z } from 'zod';
 import type { EventRow } from './types.js';
+import { startOfDay } from '../lib/start-of-day.js';
 
 /**
  * Whether members may bring a guest. Stored as one nullable column rather than
@@ -46,17 +47,6 @@ export interface RawPlusOneForm {
 }
 
 /**
- * "Oct 31" means the whole of Oct 31, so the time is dropped to midnight. That
- * midnight is in `TZ`, because chrono and `setHours` both read the process
- * clock — the same zone a host's "Friday 7pm" is read in.
- */
-function startOfDay(date: Date): number {
-  const midnight = new Date(date);
-  midnight.setHours(0, 0, 0, 0);
-  return Math.floor(midnight.getTime() / 1000);
-}
-
-/**
  * The event's start is needed to validate against: a date after it would leave
  * the button locked for the whole life of the event, which is "not allowed"
  * with extra steps — almost certainly a typo, so it is refused.
@@ -89,6 +79,7 @@ function buildPlusOneFormSchema(eventStartsAt: number, formatDate: (unix: number
         return z.NEVER;
       }
 
+      // "Oct 31" means the whole of Oct 31, so the time is dropped to midnight.
       const from = startOfDay(parsed);
       if (from > eventStartsAt) {
         ctx.addIssue({

@@ -36,6 +36,7 @@ function buildUnpublishedEventRow(
     plus_ones_allowed_from: null,
     plus_one_unlock_pending: 0,
     host_display_name: host.displayName,
+    ended: 0,
   };
 }
 

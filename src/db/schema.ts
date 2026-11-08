@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS events (
   plus_ones_allowed_from  INTEGER DEFAULT 0,
   -- 1 while the panel still shows a +1 button that a future date will unlock.
   plus_one_unlock_pending INTEGER NOT NULL DEFAULT 0,
-  host_display_name       TEXT      -- see rsvps.display_name
+  host_display_name       TEXT,     -- see rsvps.display_name
+  -- 1 once the day it started is over; the post is then locked and closed.
+  -- See jobs/past-event-job.ts.
+  ended                   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS rsvps (

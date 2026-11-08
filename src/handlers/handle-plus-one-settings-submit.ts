@@ -104,6 +104,10 @@ async function applyPlusOneSettings(
       };
     }
 
+    if (event.ended) {
+      return { message: 'This event has already happened and can no longer be edited.', offerRetry: false, notice: null };
+    }
+
     // Parsed inside the lock because it validates against the start time,
     // which a concurrent edit could be changing.
     const parsed = parsePlusOneForm(readPlusOneFormFromModal(interaction), event.starts_at, (unix) =>

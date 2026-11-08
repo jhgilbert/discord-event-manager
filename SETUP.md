@@ -52,7 +52,7 @@ Under **Bot Permissions**, tick exactly these:
 | Read Message History | Find its own New event panel on restart instead of posting a duplicate |
 | Create Public Threads | A forum post *is* a thread — this is how events get created |
 | Send Messages in Threads | Post promotion, reminder and cancellation notices |
-| Manage Threads | Unarchive before editing, apply state tags, lock on cancel, delete on `/event delete` |
+| Manage Threads | Unarchive before editing, apply state tags, lock on cancel and once an event is past, delete on `/event delete` |
 | Pin Messages | Pin the New event panel |
 
 Copy the generated URL at the bottom, open it, pick your server, and authorise.
@@ -130,7 +130,7 @@ automatically, named after the application) and allow:
 | Send Messages in Posts | No promotion, reminder or cancellation notices |
 | Embed Links | The event panel renders empty |
 | Read Message History | The panel can't be re-read, so RSVPs don't update |
-| Manage Threads | No state tags, no unarchive-before-edit, no lock on cancel, no `/event delete` |
+| Manage Threads | No state tags, no unarchive-before-edit, no lock on cancel or past events, no `/event delete` |
 
 You can add the bot user directly instead of its role; both work. Adding the
 role is easier to audit later.
@@ -323,6 +323,11 @@ of changed fields.
 Cancelling notifies everyone who RSVPed (confirmed *and* waitlisted — a queued
 member is still holding the evening open), applies the `Canceled` tag, and
 locks the thread.
+
+Past events need nothing from the host. Once a day the bot locks and closes
+every post whose day is over, so it moves to the forum's *Older Posts* — still
+there to scroll back to, but out of the main list. The RSVP buttons, `edit` and
+`cancel` all stop working on it.
 
 **Cancel and delete are different tools.** Cancel is the one to reach for
 normally: it tells everyone, and the post stays as a record. Delete is for

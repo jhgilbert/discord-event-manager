@@ -41,5 +41,10 @@ export async function handlePlusOneSettingsButton(
     return;
   }
 
+  if (event.ended) {
+    await replyEphemerally(interaction, 'This event has already happened and can no longer be edited.');
+    return;
+  }
+
   await interaction.showModal(buildPlusOneSettingsModal(event, context.environment.TZ));
 }

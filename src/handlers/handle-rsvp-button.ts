@@ -255,6 +255,14 @@ async function processRsvpClick(
       };
     }
 
+    if (event.ended) {
+      return {
+        ephemeralMessage: 'This event has already happened.',
+        promotedUserIds: [],
+        threadId: event.thread_id,
+      };
+    }
+
     refreshStoredDisplayName(context, event, userId, displayName);
 
     const result =

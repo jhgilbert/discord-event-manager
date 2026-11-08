@@ -114,6 +114,26 @@ export function deleteEventAndRsvps(database: EventDatabase, messageId: string):
   deleteBoth(messageId);
 }
 
+export function markEventEnded(database: EventDatabase, messageId: string): void {
+  database.prepare('UPDATE events SET ended = 1 WHERE message_id = ?').run(messageId);
+}
+
+/**
+ * Canceled events are left out: they were locked and closed when canceled.
+ * Runs once a day over a small table, so it goes without an index.
+ */
+export function findEventsThatHaveEnded(database: EventDatabase, startOfToday: number): EventRow[] {
+  return database
+    .prepare(
+      `SELECT * FROM events
+        WHERE ended = 0
+          AND cancelled = 0
+          AND starts_at < ?
+        ORDER BY starts_at ASC`,
+    )
+    .all(startOfToday) as EventRow[];
+}
+
 export function markReminderSent(database: EventDatabase, messageId: string): void {
   database.prepare('UPDATE events SET reminder_sent = 1 WHERE message_id = ?').run(messageId);
 }
@@ -165,7 +185,8 @@ export function findEventsDueForPlusOneUnlock(database: EventDatabase, now: numb
       `SELECT * FROM events
         WHERE plus_one_unlock_pending = 1
           AND plus_ones_allowed_from <= ?
-          AND cancelled = 0`,
+          AND cancelled = 0
+          AND ended = 0`,
     )
     .all(now) as EventRow[];
 }

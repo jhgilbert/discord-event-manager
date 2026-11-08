@@ -25,6 +25,8 @@ export interface EventRow {
   plus_ones_allowed_from: number | null;
   plus_one_unlock_pending: number;
   host_display_name: string | null;
+  /** 1 once the day it started is over. See jobs/past-event-job.ts. */
+  ended: number;
 }
 
 export interface RsvpRow {

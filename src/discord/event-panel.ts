@@ -94,9 +94,13 @@ function computeGoingFieldBudget(spentOnEverythingElse: number): number {
  * why the +1 button is greyed out — next to the thing it explains.
  */
 function buildFooterText(event: EventRow, now: number, timeZone: string): string {
-  return event.cancelled
-    ? 'This event was canceled.'
-    : describePlusOnePolicyLine(readPlusOnePolicy(event), now, timeZone);
+  if (event.cancelled) {
+    return 'This event was canceled.';
+  }
+  if (event.ended) {
+    return 'This event has ended.';
+  }
+  return describePlusOnePolicyLine(readPlusOnePolicy(event), now, timeZone);
 }
 
 function buildPanelEmbed(
@@ -165,14 +169,15 @@ function buildPanelEmbed(
  * Buttons stay enabled at capacity — a click then returns an ephemeral
  * "you're on the waitlist at #4". Disabling them would be cosmetic anyway: a
  * stale client still shows them enabled, so the server-side check is required
- * either way. Cancellation is different, and really does disable them.
+ * either way. Cancellation and the event ending are different, and really do
+ * disable them.
  *
  * Closed +1s disable the +1 button for the same reason: they are a rule, not a
  * state that changes with every click. The click handler enforces the rule
  * regardless, since a stale client can still send the click.
  */
 function buildRsvpButtons(event: EventRow, now: number): ActionRowBuilder<ButtonBuilder> {
-  const disabled = Boolean(event.cancelled);
+  const disabled = Boolean(event.cancelled || event.ended);
   const plusOneDisabled = disabled || !arePlusOnesOpen(readPlusOnePolicy(event), now);
 
   return new ActionRowBuilder<ButtonBuilder>().addComponents(

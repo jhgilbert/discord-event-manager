@@ -25,7 +25,7 @@ import { seatsTakenBy } from './types.js';
  */
 export function reconcileEvent(database: EventDatabase, messageId: string): string[] {
   const event = findEventByMessageId(database, messageId);
-  if (event === null || event.cancelled) {
+  if (event === null || event.cancelled || event.ended) {
     return [];
   }
 

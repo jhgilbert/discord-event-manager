@@ -237,6 +237,15 @@ async function applyEventEdit(
       };
     }
 
+    if (event.ended) {
+      return {
+        message: 'This event has already happened and can no longer be edited.',
+        promotedUserIds: [],
+        threadId: null,
+        notice: null,
+      };
+    }
+
     // Read before the update overwrites the values it compares against.
     const changes = listEventChanges(event, details);
 
