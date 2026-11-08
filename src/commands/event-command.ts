@@ -6,6 +6,7 @@ export const EVENT_COMMAND_NAME = 'event';
 export const EVENT_SUBCOMMANDS = {
   create: 'create',
   edit: 'edit',
+  plusOnes: 'plus-ones',
   cancel: 'cancel',
   delete: 'delete',
   reload: 'reload',
@@ -39,6 +40,11 @@ export function buildEventCommandDefinition() {
       subcommand
         .setName(EVENT_SUBCOMMANDS.edit)
         .setDescription("Edit this event (run inside the event's post)"),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName(EVENT_SUBCOMMANDS.plusOnes)
+        .setDescription("Choose whether attendees can bring a guest (run inside the event's post)"),
     )
     .addSubcommand((subcommand) =>
       subcommand

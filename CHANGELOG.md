@@ -6,6 +6,12 @@ Notable changes to the bot, newest first. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`/event plus-ones`** opens the +1 settings from inside the event's post,
+  for a host who dismissed the reply with the **+1 settings** button. The host
+  instructions in each new thread mention it.
+
 ### Changed
 
 - **The +1 line is full-size.** "+1s are allowed on or after …" (and "This

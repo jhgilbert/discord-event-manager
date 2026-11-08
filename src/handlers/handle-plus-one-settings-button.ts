@@ -1,12 +1,25 @@
-import { MessageFlags, type ButtonInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction, type ChatInputCommandInteraction } from 'discord.js';
 import type { AppContext } from '../context.js';
 import { findEventByMessageId } from '../db/event-queries.js';
+import type { EventRow } from '../domain/types.js';
 import { readMessageIdFromPlusOneSettingsButtonId } from '../discord/custom-ids.js';
 import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { buildPlusOneSettingsModal } from '../discord/plus-one-settings-modal.js';
 
-async function replyEphemerally(interaction: ButtonInteraction, content: string): Promise<void> {
-  await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+/** The two ways in: the button on a host's reply, and `/event plus-ones`. */
+type PlusOneSettingsOpener = ButtonInteraction | ChatInputCommandInteraction;
+
+function findRefusalReason(interaction: PlusOneSettingsOpener, event: EventRow): string | null {
+  if (!isHostOrServerManager(interaction, event)) {
+    return 'Only the host or a server manager can change the +1 settings.';
+  }
+  if (event.cancelled) {
+    return 'This event was canceled and can no longer be edited.';
+  }
+  if (event.ended) {
+    return 'This event has already happened and can no longer be edited.';
+  }
+  return null;
 }
 
 /**
@@ -15,6 +28,22 @@ async function replyEphemerally(interaction: ButtonInteraction, content: string)
  * again on submit. All of them are synchronous reads, because `showModal` has
  * to be the first response.
  */
+export async function openPlusOneSettings(
+  context: AppContext,
+  interaction: PlusOneSettingsOpener,
+  event: EventRow | null,
+  missingEventMessage: string,
+): Promise<void> {
+  const refusal = event === null ? missingEventMessage : findRefusalReason(interaction, event);
+
+  if (refusal !== null || event === null) {
+    await interaction.reply({ content: refusal ?? missingEventMessage, flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  await interaction.showModal(buildPlusOneSettingsModal(event, context.environment.TZ));
+}
+
 export async function handlePlusOneSettingsButton(
   context: AppContext,
   interaction: ButtonInteraction,
@@ -24,27 +53,10 @@ export async function handlePlusOneSettingsButton(
     return;
   }
 
-  const event = findEventByMessageId(context.database, messageId);
-
-  if (event === null) {
-    await replyEphemerally(interaction, 'That event no longer exists.');
-    return;
-  }
-
-  if (!isHostOrServerManager(interaction, event)) {
-    await replyEphemerally(interaction, 'Only the host or a server manager can change the +1 settings.');
-    return;
-  }
-
-  if (event.cancelled) {
-    await replyEphemerally(interaction, 'This event was canceled and can no longer be edited.');
-    return;
-  }
-
-  if (event.ended) {
-    await replyEphemerally(interaction, 'This event has already happened and can no longer be edited.');
-    return;
-  }
-
-  await interaction.showModal(buildPlusOneSettingsModal(event, context.environment.TZ));
+  await openPlusOneSettings(
+    context,
+    interaction,
+    findEventByMessageId(context.database, messageId),
+    'That event no longer exists.',
+  );
 }

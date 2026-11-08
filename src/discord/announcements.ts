@@ -102,7 +102,8 @@ export async function postHostInstructions(
     (mentions) =>
       [
         `${mentions} — you're the host. To manage this event, type one of these commands as a reply on this post (this will only be visible to you):`,
-        '· `/event edit` — change the title, time, place, details or spots, then **+1 settings** to allow guests. Attendees are pinged if the time or place moves.',
+        '· `/event edit` — change the title, time, place, details or spots. Attendees are pinged if the time or place moves.',
+        '· `/event plus-ones` — choose whether attendees can bring a guest, and from when. +1s start off.',
         '· `/event reserve-seat` — hold a seat for someone who is not on Discord. `/event release-seat` gives it back.',
         '· `/event cancel` — call it off. Everyone who RSVPed is notified and the post is locked.',
       ].join('\n'),

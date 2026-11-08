@@ -24,7 +24,8 @@ this file covers how the code is arranged.
   first reply in the thread pings the host with how to edit or cancel.
 - **RSVP** — three buttons: *RSVP*, *RSVP +1*, *Cancel RSVP*.
 - **+1s** — off by default. The host turns them on, now or from a date, with
-  the **+1 settings** button on the reply to create or edit. Until then *RSVP
+  `/event plus-ones` in the post, or the **+1 settings** button on the reply to
+  create or edit. Until then *RSVP
   +1* is greyed out and the line above the buttons says why. Turning +1s off
   later only stops new ones: a guest already on the list is never removed.
 - **Names** — the roster shows server nicknames as plain text, not mentions.

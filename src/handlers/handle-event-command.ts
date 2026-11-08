@@ -23,6 +23,7 @@ import {
 import { announceEventCancelled } from '../discord/announcements.js';
 import { lockAndCloseThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
+import { openPlusOneSettings } from './handle-plus-one-settings-button.js';
 import {
   handleReleaseSeatSubcommand,
   handleReserveSeatSubcommand,
@@ -280,6 +281,16 @@ export async function handleEventCommand(
         return;
       case EVENT_SUBCOMMANDS.edit:
         await handleEditSubcommand(context, interaction);
+        return;
+      case EVENT_SUBCOMMANDS.plusOnes:
+        // The same form the +1 settings button opens, for a host who dismissed
+        // the reply that carried the button.
+        await openPlusOneSettings(
+          context,
+          interaction,
+          findEventForInteractionChannel(context, interaction),
+          NOT_IN_AN_EVENT_POST,
+        );
         return;
       case EVENT_SUBCOMMANDS.cancel:
         await handleCancelSubcommand(context, interaction);
