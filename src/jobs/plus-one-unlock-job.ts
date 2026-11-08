@@ -7,11 +7,24 @@ import { announcePlusOnesOpen } from '../discord/announcements.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { describeError, logger } from '../lib/logger.js';
 
+const HOUR_MS = 60 * 60 * 1000;
+
 /**
- * The date is a whole day, so the button opening up to an hour after midnight
- * goes unnoticed — and a click on the post before then redraws it anyway.
+ * A few seconds past the hour, so a clock running slightly fast cannot sweep
+ * just before midnight and leave the event waiting a whole extra hour.
  */
-const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const PAST_THE_HOUR_MS = 5 * 1000;
+
+/**
+ * On the hour rather than an hour after boot, because the dates open at
+ * midnight and the post counts down to it ("in 2 hours"). Swept an hour after
+ * boot, the post could read "12 minutes ago" while the button was still
+ * greyed out. (In a timezone whose offset is not whole hours, midnight falls on
+ * the half hour and this lags by thirty minutes.)
+ */
+function msUntilNextSweep(nowMs: number): number {
+  return HOUR_MS - (nowMs % HOUR_MS) + PAST_THE_HOUR_MS;
+}
 
 /**
  * The panel is only re-rendered when something happens to the event, and the
@@ -46,8 +59,18 @@ export function startPlusOneUnlockJob(context: AppContext): () => void {
     });
   };
 
-  sweep();
-  const timer = setInterval(sweep, SWEEP_INTERVAL_MS);
+  // Rescheduled after each sweep rather than with setInterval, which drifts
+  // off the hour over weeks of uptime.
+  let timer: NodeJS.Timeout;
+  const scheduleNext = () => {
+    timer = setTimeout(() => {
+      sweep();
+      scheduleNext();
+    }, msUntilNextSweep(Date.now()));
+  };
 
-  return () => clearInterval(timer);
+  sweep();
+  scheduleNext();
+
+  return () => clearTimeout(timer);
 }

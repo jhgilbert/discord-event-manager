@@ -30,6 +30,12 @@ export function formatPlusOneDay(unix: number, timeZone: string): string {
 /**
  * Once the date has passed it drops out of the line: "allowed on or after" a
  * day that is already behind us reads like a rule still waiting to apply.
+ *
+ * The countdown is a Discord timestamp, which each viewer's app keeps current
+ * on its own, so it costs no redraws. The unlock sweep runs on the hour so the
+ * line changes as the countdown reaches zero (see jobs/plus-one-unlock-job.ts).
+ * Only the post gets one: in a thread message it would be a record that goes
+ * stale, and the settings form cannot render it.
  */
 export function describePlusOnePolicyLine(
   policy: PlusOnePolicy,
@@ -42,7 +48,7 @@ export function describePlusOnePolicyLine(
 
   return arePlusOnesOpen(policy, now)
     ? '+1s are allowed.'
-    : `+1s are allowed on or after ${formatPlusOneDay(policy.from, timeZone)}.`;
+    : `+1s are allowed on or after ${formatPlusOneDay(policy.from, timeZone)} (<t:${policy.from}:R>).`;
 }
 
 /** For change lists, where the line is "old → new" and the full sentence would not fit. */
