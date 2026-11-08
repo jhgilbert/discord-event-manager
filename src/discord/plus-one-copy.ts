@@ -1,9 +1,9 @@
 import { arePlusOnesOpen, type PlusOnePolicy } from '../domain/plus-one-policy.js';
 
 /**
- * Plain text rather than `<t:…:D>`, because the panel line lives in the embed
- * footer and footers render markup literally. The date is a whole day in `TZ`
- * anyway, so there is no per-viewer time to localise.
+ * Plain text rather than `<t:…:D>`: the date is a whole day in `TZ`, so there
+ * is no per-viewer time to localise, and the same string has to work in the
+ * settings form's prefill, where markup is not rendered.
  */
 export function formatPlusOneDate(unix: number, timeZone: string): string {
   return new Intl.DateTimeFormat('en-US', {

@@ -6,6 +6,12 @@ Notable changes to the bot, newest first. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The +1 line is full-size.** "+1s are allowed on or after …" (and "This
+  event was canceled." / "has ended.") moved from the post's small footer text
+  into the body, still as the last line above the buttons.
+
 ### Fixed
 
 - **Deploys no longer show the old container as "crashed".** Railway now

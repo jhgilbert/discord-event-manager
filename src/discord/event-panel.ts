@@ -15,7 +15,7 @@ import type { EventRow, RsvpRow } from '../domain/types.js';
 /** Discord's hard caps. Exceeding either is a 400, not a truncation. */
 const FIELD_VALUE_MAX = 1024;
 const EMBED_TOTAL_MAX = 6000;
-/** Slack for field names, the footer, and multi-byte characters in names. */
+/** Slack for field names and multi-byte characters in names. */
 const EMBED_BUDGET_SAFETY_MARGIN = 400;
 
 const COLOUR_OPEN = 0x57f287;
@@ -90,10 +90,17 @@ function computeGoingFieldBudget(spentOnEverythingElse: number): number {
 }
 
 /**
- * The footer sits directly above the buttons, which makes it the place to say
- * why the +1 button is greyed out — next to the thing it explains.
+ * The last line of the post, directly above the buttons — the place to say why
+ * the +1 button is greyed out, next to the thing it explains.
+ *
+ * A field rather than the embed footer, because Discord renders footers in
+ * small grey text and this line is one people need to read. Fields must have
+ * a name, so a zero-width space stands in for one: a heading saying "+1s"
+ * above a sentence starting "+1s" would only repeat it.
  */
-function buildFooterText(event: EventRow, now: number, timeZone: string): string {
+const UNNAMED_FIELD = '\u200b';
+
+function buildClosingLine(event: EventRow, now: number, timeZone: string): string {
   if (event.cancelled) {
     return 'This event was canceled.';
   }
@@ -119,6 +126,7 @@ function buildPanelEmbed(
       ? joinLinesWithinBudget(waiting.map(formatWaitlistLine), FIELD_VALUE_MAX)
       : '';
 
+  const closingLine = buildClosingLine(event, now, timeZone);
   const hostField = buildHostField(event);
   const whenField = buildWhenField(event);
   const locationValue = event.location ?? '';
@@ -134,7 +142,8 @@ function buildPanelEmbed(
               whenField.value.length +
               locationValue.length +
               spotsValue.length +
-              waitlistValue.length,
+              waitlistValue.length +
+              closingLine.length,
           ),
         )
       : '_Nobody yet — be the first._';
@@ -156,11 +165,12 @@ function buildPanelEmbed(
     fields.push({ name: 'Waitlist', value: waitlistValue });
   }
 
+  fields.push({ name: UNNAMED_FIELD, value: closingLine });
+
   const embed = new EmbedBuilder()
     .setTitle(event.cancelled ? `❌ ${event.title} (canceled)` : event.title)
     .setColor(event.cancelled ? COLOUR_CANCELLED : isFull ? COLOUR_FULL : COLOUR_OPEN)
-    .addFields(fields)
-    .setFooter({ text: buildFooterText(event, now, timeZone) });
+    .addFields(fields);
 
   return description === '' ? embed : embed.setDescription(description);
 }
@@ -200,8 +210,8 @@ function buildRsvpButtons(event: EventRow, now: number): ActionRowBuilder<Button
 }
 
 /**
- * `timeZone` is for the +1 date in the footer, which is plain text and so has
- * to be written in one fixed zone — the same trade the thread name makes.
+ * `timeZone` is for the +1 date on the last line, which is plain text and so
+ * has to be written in one fixed zone — the same trade the thread name makes.
  */
 export function renderEventPanel(
   event: EventRow,
