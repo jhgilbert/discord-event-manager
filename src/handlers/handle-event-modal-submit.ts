@@ -33,6 +33,7 @@ import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { buildEventEditNotice } from '../discord/event-edit-notice.js';
 import {
   announcePromotedFromWaitlist,
+  postHostInstructions,
   postNoticeInEventThread,
 } from '../discord/announcements.js';
 import { saveDraft } from '../lib/draft-store.js';
@@ -99,6 +100,11 @@ async function createEventFromForm(
     ].join('\n'),
     components: [],
   });
+
+  // After the reply, so a slow send never holds up the host's confirmation.
+  // The ephemeral reply vanishes on dismiss; this stays where they will look
+  // again when plans change.
+  await postHostInstructions(context, published.thread.id, interaction.user.id);
 }
 
 /**

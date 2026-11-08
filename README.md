@@ -20,7 +20,8 @@ this file covers how the code is arranged.
   post is named `Board game night (Friday, Aug 7 at 6:30 PM)`, so the schedule
   is readable from the forum list without opening anything.
 - **Host** — named on the panel in its own field, and RSVPed automatically when
-  the event is created. They can still withdraw with *Can't make it*.
+  the event is created. They can still withdraw with *Can't make it*. The
+  first reply in the thread pings the host with how to edit or cancel.
 - **RSVP** — three buttons: *I'm in*, *I'm in +1*, *Can't make it*.
 - **Capacity** — one number, total headcount. A guest takes a seat exactly as a
   member does, and so does the host.

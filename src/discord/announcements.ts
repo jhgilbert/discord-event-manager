@@ -80,6 +80,32 @@ export async function postNoticeInEventThread(
   await sendToEventThread(context, threadId, buildContent, chunks);
 }
 
+/**
+ * Posted as the first reply rather than folded into the panel: it is for one
+ * reader, and every attendee would otherwise scroll past it on every visit.
+ *
+ * The host is mentioned on purpose. The bot authors the post, so the host is
+ * not a thread member until something adds them — and a mention does, which is
+ * what puts later replies (and these instructions) in front of them.
+ */
+export async function postHostInstructions(
+  context: AppContext,
+  threadId: string,
+  hostId: string,
+): Promise<void> {
+  await postNoticeInEventThread(
+    context,
+    threadId,
+    (mentions) =>
+      [
+        `${mentions} — you're the host. To manage this event, type these right here in this post:`,
+        '· `/event edit` — change the title, time, place, details or spots. Attendees are pinged if the time or place moves.',
+        '· `/event cancel` — call it off. Everyone who RSVPed is notified and the post is locked.',
+      ].join('\n'),
+    [hostId],
+  );
+}
+
 export async function announcePromotedFromWaitlist(
   context: AppContext,
   threadId: string,
