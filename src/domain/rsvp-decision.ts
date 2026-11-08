@@ -23,7 +23,7 @@ export interface RsvpDecisionInput {
  * Strict FIFO means a seat freed by anyone belongs to the head of the queue.
  * So while a waitlist exists, no seat is granted here at all — only
  * `reconcileEvent` promotes, and it promotes in join order. Without this gate a
- * newcomer clicking "I'm in" could take a seat the queue was waiting on.
+ * newcomer clicking "RSVP" could take a seat the queue was waiting on.
  */
 function canTakeSeatsNow(input: RsvpDecisionInput, seatsNeeded: number): boolean {
   return input.waitlistIsEmpty && seatsNeeded <= input.remaining;
@@ -49,7 +49,7 @@ function decideForWaitlistedMember(input: RsvpDecisionInput, existing: RsvpRow):
 }
 
 /**
- * The delta matters, not the total. A confirmed solo member clicking "I'm in
+ * The delta matters, not the total. A confirmed solo member clicking "RSVP
  * +1" needs *one* more seat, not two — recomputing from scratch would refuse
  * them on an event with a single seat left.
  */

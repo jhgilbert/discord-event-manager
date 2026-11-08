@@ -158,17 +158,17 @@ function buildRsvpButtons(event: EventRow): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(RSVP_BUTTON_IDS.goingSolo)
-      .setLabel("I'm in")
+      .setLabel('RSVP')
       .setStyle(ButtonStyle.Success)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(RSVP_BUTTON_IDS.goingPlusOne)
-      .setLabel("I'm in +1")
+      .setLabel('RSVP +1')
       .setStyle(ButtonStyle.Success)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(RSVP_BUTTON_IDS.withdraw)
-      .setLabel("Can't make it")
+      .setLabel('Cancel RSVP')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(disabled),
   );

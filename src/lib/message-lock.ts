@@ -2,7 +2,7 @@
  * Serialises work per event message.
  *
  * Capacity check -> write -> reconcile -> re-render must be one critical
- * section. Without this, two people clicking "I'm in" for the last seat both
+ * section. Without this, two people clicking "RSVP" for the last seat both
  * read `remaining = 1` before either writes, and both get seated.
  *
  * Implemented as a promise chain per message ID: each task waits for the

@@ -53,7 +53,9 @@ function describeFinalRsvpState(
   }
 
   if (rsvp.status === 'confirmed') {
-    return rsvp.plus_one ? "You're in, with a guest. 🎟️" : "You're in. 🎟️";
+    return rsvp.plus_one
+      ? 'Your spot has been reserved, plus one for your guest. 🎟️'
+      : 'Your spot has been reserved. 🎟️';
   }
 
   const position = findWaitlistPosition(database, messageId, userId) ?? 1;
@@ -66,7 +68,7 @@ function describeFinalRsvpState(
   // they know dropping the guest is a choice they can make rather than a bug.
   return [
     `This event is full — you and your guest are on the waitlist at **#${position}**.`,
-    'Single spots tend to open sooner: tap **I\'m in** to drop the +1 and take the next one.',
+    'Single spots tend to open sooner: tap **RSVP** to drop the +1 and take the next one.',
   ].join('\n');
 }
 

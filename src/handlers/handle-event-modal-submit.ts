@@ -96,7 +96,7 @@ async function createEventFromForm(
   await interaction.editReply({
     content: [
       `Posted: ${published.thread.url}`,
-      "You're on the list as the host, taking one of the spots. Tap **Can't make it** on the post if you need to give it up.",
+      "You're on the list as the host, taking one of the spots. Tap **Cancel RSVP** on the post if you need to give it up.",
     ].join('\n'),
     components: [],
   });

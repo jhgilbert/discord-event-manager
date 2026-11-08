@@ -114,7 +114,7 @@ export async function announcePromotedFromWaitlist(
   await announceInEventThread(
     context,
     threadId,
-    (mentions) => `${mentions} — a spot opened up and you're off the waitlist. You're in! 🎉`,
+    (mentions) => `${mentions} — a spot opened up and you're off the waitlist. Your spot has been reserved! 🎉`,
     promotedUserIds,
   );
 }

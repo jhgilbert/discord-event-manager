@@ -20,9 +20,9 @@ this file covers how the code is arranged.
   post is named `Board game night (Friday, Aug 7 at 6:30 PM)`, so the schedule
   is readable from the forum list without opening anything.
 - **Host** — named on the panel in its own field, and RSVPed automatically when
-  the event is created. They can still withdraw with *Can't make it*. The
+  the event is created. They can still withdraw with *Cancel RSVP*. The
   first reply in the thread pings the host with how to edit or cancel.
-- **RSVP** — three buttons: *I'm in*, *I'm in +1*, *Can't make it*.
+- **RSVP** — three buttons: *RSVP*, *RSVP +1*, *Cancel RSVP*.
 - **Capacity** — one number, total headcount. A guest takes a seat exactly as a
   member does, and so does the host.
 - **Waitlist** — strict FIFO, promoted automatically when room appears, with an
@@ -98,14 +98,14 @@ needs no special case: reconcile runs and simply finds more room.
 reconcile and re-render are one critical section per event. Without it, two
 people clicking for the last seat both read `remaining = 1` and both get in.
 
-**Upgrades are computed as a delta.** A confirmed solo member clicking "I'm in
+**Upgrades are computed as a delta.** A confirmed solo member clicking "RSVP
 +1" needs *one* more seat, not two. Recomputing from scratch is the easy bug
 here, and it wrongly refuses people on an event with one seat left.
 
 **Strict FIFO means seats are only ever granted by reconcile.** While a waitlist
 exists, no click seats anyone directly — otherwise a newcomer could take the
 seat the queue is waiting on. A queued member with a guest who is blocking a
-single free seat unblocks by their own choice: they tap *I'm in*, drop the +1,
+single free seat unblocks by their own choice: they tap *RSVP*, drop the +1,
 and reconcile seats them.
 
 **The host's seat is written with the event row, in one transaction.**
