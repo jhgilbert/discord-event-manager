@@ -6,14 +6,16 @@ import {
   promoteRsvpToConfirmed,
 } from '../db/rsvp-queries.js';
 import { countTakenSeats } from './capacity.js';
-import { seatsTakenBy } from './types.js';
+import { seatsTakenBy, type RsvpRow } from './types.js';
 
 /**
  * The single place a waitlisted member becomes confirmed.
  *
  * Called after *every* mutation — RSVP, withdrawal, capacity edit — so no
  * handler needs promotion logic of its own and a capacity change needs no
- * special case. Returns the users promoted, so the caller can announce them.
+ * special case. Returns the RSVPs promoted, so the caller can announce them —
+ * rows rather than IDs, because a reserved seat is announced to whoever
+ * reserved it.
  *
  * Strict FIFO: the loop stops at the first entry that does not fit rather than
  * skipping ahead to a smaller one. A queued member with a guest who is blocking
@@ -23,7 +25,7 @@ import { seatsTakenBy } from './types.js';
  * capacity below the confirmed headcount and `remaining` goes negative, nothing
  * is promoted, and existing attendees keep their seats.
  */
-export function reconcileEvent(database: EventDatabase, messageId: string): string[] {
+export function reconcileEvent(database: EventDatabase, messageId: string): RsvpRow[] {
   const event = findEventByMessageId(database, messageId);
   if (event === null || event.cancelled || event.ended) {
     return [];
@@ -35,7 +37,7 @@ export function reconcileEvent(database: EventDatabase, messageId: string): stri
   }
 
   let remaining = event.capacity - countTakenSeats(listConfirmedInJoinOrder(database, messageId));
-  const promotedUserIds: string[] = [];
+  const promoted: RsvpRow[] = [];
 
   const promoteWhileTheQueueHeadFits = database.transaction(() => {
     for (const candidate of waiting) {
@@ -45,11 +47,11 @@ export function reconcileEvent(database: EventDatabase, messageId: string): stri
       }
 
       promoteRsvpToConfirmed(database, messageId, candidate.user_id);
-      promotedUserIds.push(candidate.user_id);
+      promoted.push(candidate);
       remaining -= seatsNeeded;
     }
   });
 
   promoteWhileTheQueueHeadFits();
-  return promotedUserIds;
+  return promoted;
 }

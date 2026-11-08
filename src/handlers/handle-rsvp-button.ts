@@ -14,6 +14,7 @@ import {
 import { summarizeCapacity } from '../domain/capacity.js';
 import { arePlusOnesOpen, readPlusOnePolicy, type PlusOnePolicy } from '../domain/plus-one-policy.js';
 import { reconcileEvent } from '../domain/reconcile.js';
+import type { RsvpRow } from '../domain/types.js';
 import { decideRsvpOutcome, type RsvpDecision } from '../domain/rsvp-decision.js';
 import { readRsvpButtonAction, type RsvpButtonAction } from '../discord/custom-ids.js';
 import { announcePromotedFromWaitlist } from '../discord/announcements.js';
@@ -25,7 +26,7 @@ import { describeError, logger } from '../lib/logger.js';
 
 interface RsvpClickOutcome {
   ephemeralMessage: string;
-  promotedUserIds: string[];
+  promoted: RsvpRow[];
   threadId: string | null;
 }
 
@@ -139,7 +140,7 @@ function handleGoingClick(
   const event = findEventByMessageId(database, messageId);
 
   if (event === null) {
-    return { ephemeralMessage: 'This event is no longer being tracked.', promotedUserIds: [] };
+    return { ephemeralMessage: 'This event is no longer being tracked.', promoted: [] };
   }
 
   const confirmed = listConfirmedInJoinOrder(database, messageId);
@@ -163,23 +164,23 @@ function handleGoingClick(
         existing !== null,
         context.environment.TZ,
       ),
-      promotedUserIds: [],
+      promoted: [],
     };
   }
 
   if (decision.kind === 'reject-upgrade') {
     return {
       ephemeralMessage: describeRejectedUpgrade(decision.reason, Math.max(0, remaining)),
-      promotedUserIds: [],
+      promoted: [],
     };
   }
 
   applyDecisionToDatabase(database, messageId, userId, displayName, decision);
-  const promotedUserIds = reconcileEvent(database, messageId);
+  const promoted = reconcileEvent(database, messageId);
 
   return {
     ephemeralMessage: describeFinalRsvpState(database, messageId, userId, plusOnesOpen),
-    promotedUserIds,
+    promoted,
   };
 }
 
@@ -191,17 +192,17 @@ function handleWithdrawClick(
   const { database } = context;
 
   if (findRsvp(database, messageId, userId) === null) {
-    return { ephemeralMessage: "You weren't RSVPed to this one.", promotedUserIds: [] };
+    return { ephemeralMessage: "You weren't RSVPed to this one.", promoted: [] };
   }
 
   // One button covers both states: withdrawing from the waitlist and giving up
   // a confirmed seat are the same intent.
   deleteRsvp(database, messageId, userId);
-  const promotedUserIds = reconcileEvent(database, messageId);
+  const promoted = reconcileEvent(database, messageId);
 
   return {
     ephemeralMessage: "You're off the list. Thanks for letting us know.",
-    promotedUserIds,
+    promoted,
   };
 }
 
@@ -242,7 +243,7 @@ async function processRsvpClick(
     if (event === null) {
       return {
         ephemeralMessage: 'This event is no longer being tracked.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: null,
       };
     }
@@ -250,7 +251,7 @@ async function processRsvpClick(
     if (event.cancelled) {
       return {
         ephemeralMessage: 'This event has been canceled.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: event.thread_id,
       };
     }
@@ -258,7 +259,7 @@ async function processRsvpClick(
     if (event.ended) {
       return {
         ephemeralMessage: 'This event has already happened.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: event.thread_id,
       };
     }
@@ -305,7 +306,7 @@ export async function handleRsvpButton(
     });
 
     if (outcome.threadId !== null) {
-      await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promotedUserIds);
+      await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promoted);
     }
   } catch (error: unknown) {
     logger.error('rsvp click failed', {

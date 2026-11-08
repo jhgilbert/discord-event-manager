@@ -43,6 +43,13 @@ this file covers how the code is arranged.
 - **Delete** — `/event delete` inside the post, **server administrators only**.
   Erases the post, its replies and its RSVPs, after a confirmation naming what
   will be lost. Nobody is notified; use `cancel` for that.
+- **Reserved seats** — `/event reserve-seat for: Levi` inside the post holds a
+  seat for someone not on Discord; `/event release-seat for: Levi` gives it back
+  (the name autocompletes). Host or **Manage Server**. A reserved seat counts
+  and queues like any RSVP — a full event puts Levi on the waitlist — and shows
+  as plain "Levi" on the roster. Levi cannot be pinged, so whoever reserved the
+  seat is pinged instead: on promotion, a moved time or place, or cancellation.
+  Reminders skip reserved seats. The seat stays if the host drops out.
 - **Reload** — `/event reload` inside the post, **server administrators only**. Looks up every attendee's current server nickname
   and redraws the post. Works on canceled and past posts, which it re-closes.
 - **Reminders** — posted in-thread to confirmed attendees, `REMINDER_LEAD_MINUTES`

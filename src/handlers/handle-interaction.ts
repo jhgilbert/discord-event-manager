@@ -17,6 +17,7 @@ import { handleNewEventButton } from './handle-new-event-button.js';
 import { handlePlusOneSettingsButton } from './handle-plus-one-settings-button.js';
 import { handlePlusOneSettingsSubmit } from './handle-plus-one-settings-submit.js';
 import { handleReopenModalButton } from './handle-reopen-modal-button.js';
+import { suggestReservedNames } from './handle-reserved-seat-commands.js';
 import { handleRsvpButton } from './handle-rsvp-button.js';
 import { describeError, logger } from '../lib/logger.js';
 
@@ -59,6 +60,11 @@ export async function handleInteraction(
   try {
     if (interaction.isChatInputCommand() && interaction.commandName === EVENT_COMMAND_NAME) {
       await handleEventCommand(context, interaction);
+      return;
+    }
+
+    if (interaction.isAutocomplete() && interaction.commandName === EVENT_COMMAND_NAME) {
+      await suggestReservedNames(context, interaction);
       return;
     }
 

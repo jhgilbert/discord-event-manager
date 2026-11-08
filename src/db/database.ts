@@ -60,6 +60,7 @@ export function openDatabase(databasePath: string): EventDatabase {
   addColumnIfMissing(database, 'events', 'plus_one_unlock_pending', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(database, 'events', 'host_display_name', 'TEXT');
   addColumnIfMissing(database, 'rsvps', 'display_name', 'TEXT');
+  addColumnIfMissing(database, 'rsvps', 'reserved_by', 'TEXT');
   addColumnIfMissing(database, 'events', 'ended', 'INTEGER NOT NULL DEFAULT 0');
   database.exec(POST_MIGRATION_STATEMENTS);
 

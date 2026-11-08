@@ -8,9 +8,11 @@ import {
 } from 'discord.js';
 import type { AppContext } from '../context.js';
 import { EVENT_SUBCOMMANDS } from '../commands/event-command.js';
-import { findEventByMessageId, markEventCancelled } from '../db/event-queries.js';
+import { markEventCancelled } from '../db/event-queries.js';
 import { buildConfirmDeleteButtonId } from '../discord/custom-ids.js';
+import { findEventForChannel, NOT_IN_AN_EVENT_POST } from '../discord/event-post-lookup.js';
 import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
+import { listWhoToNotify } from '../domain/reserved-seats.js';
 import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
 import { isHostOrServerManager } from '../discord/event-permissions.js';
@@ -21,18 +23,17 @@ import {
 import { announceEventCancelled } from '../discord/announcements.js';
 import { lockAndCloseThread, refreshEventPanelNow } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
+import {
+  handleReleaseSeatSubcommand,
+  handleReserveSeatSubcommand,
+} from './handle-reserved-seat-commands.js';
 import { describeError, logger } from '../lib/logger.js';
 
-/**
- * `edit` and `cancel` are run inside the event's own post, so the channel the
- * command came from *is* the event: for a forum post the thread ID, the starter
- * message ID and our primary key are all the same snowflake.
- */
 function findEventForInteractionChannel(
   context: AppContext,
   interaction: ChatInputCommandInteraction,
 ): EventRow | null {
-  return findEventByMessageId(context.database, interaction.channelId);
+  return findEventForChannel(context, interaction.channelId);
 }
 
 /**
@@ -47,9 +48,6 @@ function findEventForInteractionChannel(
 function isServerAdministrator(interaction: ChatInputCommandInteraction): boolean {
   return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
 }
-
-const NOT_IN_AN_EVENT_POST =
-  "Run this inside the event's own post in the events forum — that's how I know which event you mean.";
 
 async function replyEphemerally(
   interaction: ChatInputCommandInteraction,
@@ -134,10 +132,10 @@ async function handleCancelSubcommand(
   const everyoneToNotify = await withMessageLock(event.message_id, async () => {
     // Everyone who was counting on it, queued or seated — a waitlisted member
     // is still holding the evening open.
-    const notify = [
+    const notify = listWhoToNotify([
       ...listConfirmedInJoinOrder(context.database, event.message_id),
       ...listWaitlistInJoinOrder(context.database, event.message_id),
-    ].map((rsvp) => rsvp.user_id);
+    ]);
 
     markEventCancelled(context.database, event.message_id);
 
@@ -291,6 +289,12 @@ export async function handleEventCommand(
         return;
       case EVENT_SUBCOMMANDS.reload:
         await handleReloadSubcommand(context, interaction);
+        return;
+      case EVENT_SUBCOMMANDS.reserveSeat:
+        await handleReserveSeatSubcommand(context, interaction);
+        return;
+      case EVENT_SUBCOMMANDS.releaseSeat:
+        await handleReleaseSeatSubcommand(context, interaction);
         return;
       default:
         await replyEphemerally(interaction, 'Unknown subcommand.');

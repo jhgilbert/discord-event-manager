@@ -54,6 +54,7 @@ function buildHostRsvpRow(host: EventHost): RsvpRow {
     status: 'confirmed',
     created_at: 0,
     display_name: host.displayName,
+    reserved_by: null,
   };
 }
 

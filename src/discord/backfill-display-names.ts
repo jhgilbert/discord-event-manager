@@ -6,6 +6,7 @@ import {
   listWaitlistInJoinOrder,
   updateRsvpDisplayName,
 } from '../db/rsvp-queries.js';
+import { isReservedSeat } from '../domain/reserved-seats.js';
 import type { EventRow } from '../domain/types.js';
 import { describeError, logger } from '../lib/logger.js';
 
@@ -50,7 +51,7 @@ function listUserIdsMissingAName(context: AppContext, event: EventRow): string[]
     ...listConfirmedInJoinOrder(context.database, event.message_id),
     ...listWaitlistInJoinOrder(context.database, event.message_id),
   ]) {
-    if (rsvp.display_name === null) {
+    if (rsvp.display_name === null && !isReservedSeat(rsvp)) {
       missing.add(rsvp.user_id);
     }
   }
@@ -115,14 +116,14 @@ export interface NameRefreshSummary {
   failed: number;
 }
 
+/** Reserved seats are left out: the host typed that name, and it has no member to look up. */
 function listEveryoneOnTheEvent(context: AppContext, event: EventRow): string[] {
-  return [
-    ...new Set([
-      event.host_id,
-      ...listConfirmedInJoinOrder(context.database, event.message_id).map((rsvp) => rsvp.user_id),
-      ...listWaitlistInJoinOrder(context.database, event.message_id).map((rsvp) => rsvp.user_id),
-    ]),
-  ];
+  const discordMembers = [
+    ...listConfirmedInJoinOrder(context.database, event.message_id),
+    ...listWaitlistInJoinOrder(context.database, event.message_id),
+  ].filter((rsvp) => !isReservedSeat(rsvp));
+
+  return [...new Set([event.host_id, ...discordMembers.map((rsvp) => rsvp.user_id)])];
 }
 
 /**

@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS rsvps (
   -- Server nickname, refreshed on every click. NULL until known; the panel
   -- then falls back to a mention. See discord/display-names.ts.
   display_name TEXT,
+  -- Set for a seat the host reserved for someone not on Discord: the user ID
+  -- of whoever reserved it. user_id then holds a name key, not a Discord ID.
+  -- See domain/reserved-seats.ts.
+  reserved_by  TEXT,
   PRIMARY KEY (message_id, user_id)
 );
 

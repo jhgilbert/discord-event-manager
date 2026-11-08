@@ -19,7 +19,8 @@ import {
 } from '../domain/event-changes.js';
 import { parseEventForm, type RawEventForm } from '../domain/event-form.js';
 import { reconcileEvent } from '../domain/reconcile.js';
-import type { EventDetails } from '../domain/types.js';
+import { listWhoToNotify } from '../domain/reserved-seats.js';
+import type { EventDetails, RsvpRow } from '../domain/types.js';
 import {
   buildReopenModalButtonId,
   readEventModalTarget,
@@ -153,19 +154,18 @@ async function renameThreadForUpdatedEvent(
 /**
  * Everyone with a stake in the event, queued as well as seated, minus whoever
  * made the change — they know, they just did it, and being pinged by your own
- * edit is the kind of thing that gets a thread muted.
+ * edit is the kind of thing that gets a thread muted. A reserved seat pings
+ * whoever reserved it.
  */
 function listAttendeesToNotify(
   context: AppContext,
   messageId: string,
   editorId: string,
 ): string[] {
-  return [
+  return listWhoToNotify([
     ...listConfirmedInJoinOrder(context.database, messageId),
     ...listWaitlistInJoinOrder(context.database, messageId),
-  ]
-    .map((rsvp) => rsvp.user_id)
-    .filter((userId) => userId !== editorId);
+  ]).filter((userId) => userId !== editorId);
 }
 
 /**
@@ -192,7 +192,7 @@ interface EditNotice {
 
 interface EditOutcome {
   message: string;
-  promotedUserIds: string[];
+  promoted: RsvpRow[];
   /** Null when the edit was refused, which also hides the +1 settings button. */
   threadId: string | null;
   notice: EditNotice | null;
@@ -210,7 +210,7 @@ async function applyEventEdit(
     if (event === null) {
       return {
         message: 'That event no longer exists.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: null,
         notice: null,
       };
@@ -222,7 +222,7 @@ async function applyEventEdit(
     if (!isHostOrServerManager(interaction, event)) {
       return {
         message: 'Only the host or a server manager can edit this event.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: null,
         notice: null,
       };
@@ -231,7 +231,7 @@ async function applyEventEdit(
     if (event.cancelled) {
       return {
         message: 'This event was canceled and can no longer be edited.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: null,
         notice: null,
       };
@@ -240,7 +240,7 @@ async function applyEventEdit(
     if (event.ended) {
       return {
         message: 'This event has already happened and can no longer be edited.',
-        promotedUserIds: [],
+        promoted: [],
         threadId: null,
         notice: null,
       };
@@ -259,7 +259,7 @@ async function applyEventEdit(
 
     // Raising capacity needs no special case: reconcile is called after every
     // mutation and simply finds more room this time.
-    const promotedUserIds = reconcileEvent(context.database, messageId);
+    const promoted = reconcileEvent(context.database, messageId);
 
     await renameThreadForUpdatedEvent(context, event.thread_id, event, details);
     await refreshEventPanel(context, messageId);
@@ -279,7 +279,7 @@ async function applyEventEdit(
     if (changes.length === 0) {
       return {
         message: 'Nothing changed.',
-        promotedUserIds,
+        promoted,
         threadId: event.thread_id,
         notice: null,
       };
@@ -291,7 +291,7 @@ async function applyEventEdit(
 
     return {
       message: describeEditOutcome(changes, mentionUserIds.length),
-      promotedUserIds,
+      promoted,
       threadId: event.thread_id,
       notice: {
         buildContent: buildEventEditNotice(interaction.user.id, changes, event, details),
@@ -323,7 +323,7 @@ async function applyEventEdit(
     );
   }
 
-  await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promotedUserIds);
+  await announcePromotedFromWaitlist(context, outcome.threadId, outcome.promoted);
 }
 
 export async function handleEventModalSubmit(

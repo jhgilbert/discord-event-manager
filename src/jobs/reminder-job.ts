@@ -2,6 +2,7 @@ import type { AppContext } from '../context.js';
 import { findEventsDueForReminder, markReminderSent } from '../db/event-queries.js';
 import { listConfirmedInJoinOrder } from '../db/rsvp-queries.js';
 import { announceEventReminder } from '../discord/announcements.js';
+import { isReservedSeat } from '../domain/reserved-seats.js';
 import { describeError, logger } from '../lib/logger.js';
 
 /**
@@ -33,10 +34,12 @@ async function sendReminderFor(
 
   // The waitlist is deliberately not pinged: they do not have a seat, and
   // "your event starts soon" to someone who is not going is just noise.
+  // Reserved seats are skipped too: whoever reserved one is the host or a
+  // server manager, who knows when their own event starts.
   await announceEventReminder(
     context,
     event.thread_id,
-    confirmed.map((rsvp) => rsvp.user_id),
+    confirmed.filter((rsvp) => !isReservedSeat(rsvp)).map((rsvp) => rsvp.user_id),
     event.title,
     event.starts_at,
   );

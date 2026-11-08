@@ -283,6 +283,8 @@ guest needs two and waits for them.
 | Edit an event | `/event edit`, run **inside that event's post** |
 | Cancel an event | `/event cancel`, run **inside that event's post** |
 | Delete an event | `/event delete`, run **inside that event's post** — admins only |
+| Hold a seat for someone not on Discord | `/event reserve-seat for: Levi`, run **inside that event's post** |
+| Give that seat back | `/event release-seat for: Levi` — the name autocompletes |
 | Refresh names on a post | `/event reload`, run **inside that event's post** — admins only |
 | RSVP | The buttons on the event post |
 | Allow +1s | **+1 settings** on the reply to create, or to `/event edit` |
@@ -298,12 +300,22 @@ Who can do what:
 | Edit | ✅ | ✅ | ✅ | — |
 | Cancel | ✅ | ✅ | ✅ | — |
 | Delete | — | — | ✅ | — |
+| Reserve / release a seat | ✅ | ✅ | ✅ | — |
 | Reload | — | — | ✅ | — |
 
 Administrators hold every permission in Discord, so they pass the Manage Server
 checks too. A server manager can fix or call off an event whose host has gone
 quiet or left, but only an administrator can erase one — cancelling is
 recoverable and tells everyone, deleting is neither.
+
+A reserved seat is treated like anyone's RSVP: it takes a seat if there is
+room, and goes on the waitlist (in order, behind whoever is already waiting) if
+there is not. To squeeze someone in regardless, raise the spots with
+`/event edit` first. Names are unique per event, ignoring capitals — a second
+Levi needs an initial. Each reserve and release is noted in the thread, without
+pinging anyone, so the waitlist can see why the count moved. Whoever reserved
+the seat is the one pinged about it later, since Levi has no Discord account to
+ping. If the host drops out, their reserved seats stay.
 
 `reload` looks up everyone on the post again and redraws it, which replaces
 any leftover user IDs and picks up changed nicknames. It is never needed for the

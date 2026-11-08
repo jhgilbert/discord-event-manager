@@ -1,4 +1,5 @@
 import { InteractionContextType, SlashCommandBuilder } from 'discord.js';
+import { RESERVED_NAME_MAX_LENGTH } from '../domain/reserved-seats.js';
 
 export const EVENT_COMMAND_NAME = 'event';
 
@@ -8,7 +9,15 @@ export const EVENT_SUBCOMMANDS = {
   cancel: 'cancel',
   delete: 'delete',
   reload: 'reload',
+  reserveSeat: 'reserve-seat',
+  releaseSeat: 'release-seat',
 } as const;
+
+/**
+ * Named `for` so the command reads as a sentence where it is typed:
+ * `/event reserve-seat for: Levi`.
+ */
+export const RESERVED_SEAT_NAME_OPTION = 'for';
 
 /**
  * `create` takes no options on purpose: a command with options cannot open a
@@ -45,6 +54,33 @@ export function buildEventCommandDefinition() {
       subcommand
         .setName(EVENT_SUBCOMMANDS.reload)
         .setDescription("Admin only: refresh everyone's names and redraw this post"),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName(EVENT_SUBCOMMANDS.reserveSeat)
+        .setDescription('Hold a seat for someone who is not on Discord (run inside the event post)')
+        .addStringOption((option) =>
+          option
+            .setName(RESERVED_SEAT_NAME_OPTION)
+            .setDescription('Their name, as it should appear on the post')
+            .setRequired(true)
+            .setMaxLength(RESERVED_NAME_MAX_LENGTH),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName(EVENT_SUBCOMMANDS.releaseSeat)
+        .setDescription('Give up a seat you reserved for someone (run inside the event post)')
+        .addStringOption((option) =>
+          option
+            .setName(RESERVED_SEAT_NAME_OPTION)
+            .setDescription('Who the seat was reserved for')
+            .setRequired(true)
+            .setMaxLength(RESERVED_NAME_MAX_LENGTH)
+            // Offers the names reserved on this post, so releasing one never
+            // depends on retyping it exactly.
+            .setAutocomplete(true),
+        ),
     )
     .toJSON();
 }

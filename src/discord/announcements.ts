@@ -1,4 +1,7 @@
+import { escapeMarkdown } from 'discord.js';
 import type { AppContext } from '../context.js';
+import { isReservedSeat, whoToNotifyFor } from '../domain/reserved-seats.js';
+import type { RsvpRow } from '../domain/types.js';
 import { ensureThreadIsEditable, fetchEventThread } from './refresh-event-panel.js';
 import { describeError, logger } from '../lib/logger.js';
 
@@ -100,23 +103,38 @@ export async function postHostInstructions(
       [
         `${mentions} — you're the host. To manage this event, type one of these commands as a reply on this post (this will only be visible to you):`,
         '· `/event edit` — change the title, time, place, details or spots, then **+1 settings** to allow guests. Attendees are pinged if the time or place moves.',
+        '· `/event reserve-seat` — hold a seat for someone who is not on Discord. `/event release-seat` gives it back.',
         '· `/event cancel` — call it off. Everyone who RSVPed is notified and the post is locked.',
       ].join('\n'),
     [hostId],
   );
 }
 
+/**
+ * A reserved seat is announced to whoever reserved it, one message per seat so
+ * the name being promoted is the one in the sentence.
+ */
 export async function announcePromotedFromWaitlist(
   context: AppContext,
   threadId: string,
-  promotedUserIds: string[],
+  promoted: RsvpRow[],
 ): Promise<void> {
   await announceInEventThread(
     context,
     threadId,
     (mentions) => `${mentions} — a spot opened up and you're off the waitlist. Your spot has been reserved! 🎉`,
-    promotedUserIds,
+    promoted.filter((rsvp) => !isReservedSeat(rsvp)).map((rsvp) => rsvp.user_id),
   );
+
+  for (const seat of promoted.filter(isReservedSeat)) {
+    const name = escapeMarkdown(seat.display_name ?? '');
+    await announceInEventThread(
+      context,
+      threadId,
+      (mentions) => `${mentions} — a spot opened up, so **${name}** is off the waitlist. Their spot has been reserved! 🎉`,
+      [whoToNotifyFor(seat)],
+    );
+  }
 }
 
 export async function announceEventCancelled(

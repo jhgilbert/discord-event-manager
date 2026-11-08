@@ -37,6 +37,8 @@ export interface RsvpRow {
   created_at: number;
   /** Null for RSVPs from before names were stored, until a lookup fills it in. */
   display_name: string | null;
+  /** Who reserved this seat for someone not on Discord. See domain/reserved-seats.ts. */
+  reserved_by: string | null;
 }
 
 /** The fields the host controls through the modal, in both create and edit. */
