@@ -127,7 +127,7 @@ function listEveryoneOnTheEvent(context: AppContext, event: EventRow): string[] 
 
 /**
  * For `/event reload`: everyone, not just the missing, and no per-render cap —
- * a moderator asked for it and is waiting on the answer. People once found to
+ * an admin asked for it and is waiting on the answer. People once found to
  * be gone are asked again, in case they rejoined.
  */
 export async function refreshAllDisplayNames(

@@ -283,7 +283,7 @@ guest needs two and waits for them.
 | Edit an event | `/event edit`, run **inside that event's post** |
 | Cancel an event | `/event cancel`, run **inside that event's post** |
 | Delete an event | `/event delete`, run **inside that event's post** — admins only |
-| Refresh names on a post | `/event reload`, run **inside that event's post** — moderators only |
+| Refresh names on a post | `/event reload`, run **inside that event's post** — admins only |
 | RSVP | The buttons on the event post |
 | Allow +1s | **+1 settings** on the reply to create, or to `/event edit` |
 | Drop out as host | **Cancel RSVP** on your own post — the event stays up, your spot is freed |
@@ -298,7 +298,7 @@ Who can do what:
 | Edit | ✅ | ✅ | ✅ | — |
 | Cancel | ✅ | ✅ | ✅ | — |
 | Delete | — | — | ✅ | — |
-| Reload | — | ✅ | ✅ | — |
+| Reload | — | — | ✅ | — |
 
 Administrators hold every permission in Discord, so they pass the Manage Server
 checks too. A server manager can fix or call off an event whose host has gone
@@ -307,9 +307,9 @@ recoverable and tells everyone, deleting is neither.
 
 `reload` looks up everyone on the post again and redraws it, which replaces
 any leftover user IDs and picks up changed nicknames. It is never needed for the
-post to work, so it is kept for moderators rather than every host. On a canceled
+post to work, so it is kept for administrators rather than every host. On a canceled
 or past post the bot reopens it to redraw and then locks and closes it again;
-running a command in a locked post needs **Manage Threads**.
+administrators can run commands in a locked post.
 
 **Every edit posts what changed, in the event's own thread** — including the
 host's own edits, and including a change made by an admin. The notice names who

@@ -13,7 +13,7 @@ import { buildConfirmDeleteButtonId } from '../discord/custom-ids.js';
 import { listConfirmedInJoinOrder, listWaitlistInJoinOrder } from '../db/rsvp-queries.js';
 import type { EventRow } from '../domain/types.js';
 import { buildEventModal, buildPrefillFromEvent } from '../discord/event-modal.js';
-import { isHostOrServerManager, isServerManager } from '../discord/event-permissions.js';
+import { isHostOrServerManager } from '../discord/event-permissions.js';
 import {
   refreshAllDisplayNames,
   type NameRefreshSummary,
@@ -40,6 +40,9 @@ function findEventForInteractionChannel(
  * recoverable and tells everyone what happened; deleting destroys the post, its
  * whole discussion and every RSVP with no notice and no undo, so it is held to
  * the server's highest permission. Guild owners hold it implicitly.
+ *
+ * `reload` uses it too: it is harmless, but it is admin housekeeping, and
+ * keeping it off everyone else's plate keeps their command list simple.
  */
 function isServerAdministrator(interaction: ChatInputCommandInteraction): boolean {
   return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
@@ -236,8 +239,8 @@ async function handleReloadSubcommand(
     return;
   }
 
-  if (!isServerManager(interaction)) {
-    await replyEphemerally(interaction, 'Only a server moderator (Manage Server) can reload an event post.');
+  if (!isServerAdministrator(interaction)) {
+    await replyEphemerally(interaction, 'Only a server administrator can reload an event post.');
     return;
   }
 

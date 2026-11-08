@@ -44,7 +44,7 @@ export function buildEventCommandDefinition() {
     .addSubcommand((subcommand) =>
       subcommand
         .setName(EVENT_SUBCOMMANDS.reload)
-        .setDescription("Moderators only: refresh everyone's names and redraw this post"),
+        .setDescription("Admin only: refresh everyone's names and redraw this post"),
     )
     .toJSON();
 }
