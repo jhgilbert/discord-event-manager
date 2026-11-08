@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^24.0.10",
+    "railway": "^3.16.0",
     "typescript": "^5.8.3"
   }
 }
