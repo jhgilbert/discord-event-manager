@@ -4,6 +4,15 @@ Notable changes to the bot, newest first. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Deploys no longer show the old container as "crashed".** Railway now
+  starts the bot with `node` directly instead of through `npm start`, so the
+  stop signal reaches the bot and it shuts down cleanly, closing the database
+  properly on the way out.
+
 ## [1.1.0] - 2026-11-08
 
 ### Added
