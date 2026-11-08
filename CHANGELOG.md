@@ -4,6 +4,40 @@ Notable changes to the bot, newest first. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-08
+
+### Added
+
+- **A countdown to when +1s open.** The line above the buttons now ends with
+  how far away the date is, for example "(in 3 days)". Discord keeps it up to
+  date on its own, so the post is not redrawn to do it.
+
+### Changed
+
+- **+1 dates name the day of the week:** "+1s are allowed on or after Monday,
+  Nov 9, 2026." This applies to the post, the host's confirmation and the
+  change notice in the thread. The **+1 settings** form still fills in the
+  plain date, so it can be resubmitted as is.
+- **+1s open on the hour.** The hourly check now runs just after each hour
+  (8:00, 9:00, …) instead of an hour after the bot last started. A date set to
+  midnight opens at midnight, not up to an hour later.
+- **Railway settings moved from `railway.json` to `.railway/railway.ts`,**
+  because Railway stops reading `railway.json` on 2026-12-01. The settings
+  themselves are unchanged. Preview changes with `railway config plan` and
+  apply them with `railway config apply`; see SETUP.md.
+
+### Security
+
+- Updated `undici` (used by discord.js to reach Discord) and `zod` to fix
+  published high-severity issues.
+
+### Upgrade notes
+
+- Existing posts pick up the weekday and countdown the next time they are
+  redrawn (any click, or `/event reload`).
+- The Railway switch has already been applied to the live service. Editing
+  `railway.json` would no longer do anything, so it has been removed.
+
 ## [1.2.0] - 2026-11-08
 
 ### Added
@@ -92,6 +126,7 @@ Notable changes to the bot, newest first. The format follows
 First release: events posted to a forum with RSVP buttons, capacity, a
 waitlist, +1s, reminders, and `/event edit`, `cancel` and `delete`.
 
+[1.3.0]: https://github.com/jhgilbert/discord-event-manager/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/jhgilbert/discord-event-manager/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jhgilbert/discord-event-manager/compare/c8137b5...v1.1.0
 [1.0.0]: https://github.com/jhgilbert/discord-event-manager/commits/c8137b5
