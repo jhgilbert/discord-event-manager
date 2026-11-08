@@ -6,12 +6,16 @@ import {
   readDraftTokenFromButtonId,
   readEventModalTarget,
   readMessageIdFromConfirmDeleteButtonId,
+  readMessageIdFromPlusOneSettingsButtonId,
+  readMessageIdFromPlusOneSettingsModalId,
   readRsvpButtonAction,
 } from '../discord/custom-ids.js';
 import { handleConfirmDeleteButton } from './handle-confirm-delete-button.js';
 import { handleEventCommand } from './handle-event-command.js';
 import { handleEventModalSubmit } from './handle-event-modal-submit.js';
 import { handleNewEventButton } from './handle-new-event-button.js';
+import { handlePlusOneSettingsButton } from './handle-plus-one-settings-button.js';
+import { handlePlusOneSettingsSubmit } from './handle-plus-one-settings-submit.js';
 import { handleReopenModalButton } from './handle-reopen-modal-button.js';
 import { handleRsvpButton } from './handle-rsvp-button.js';
 import { describeError, logger } from '../lib/logger.js';
@@ -38,6 +42,11 @@ async function routeButton(context: AppContext, interaction: ButtonInteraction):
     return;
   }
 
+  if (readMessageIdFromPlusOneSettingsButtonId(interaction.customId) !== null) {
+    await handlePlusOneSettingsButton(context, interaction);
+    return;
+  }
+
   if (readRsvpButtonAction(interaction.customId) !== null) {
     await handleRsvpButton(context, interaction);
   }
@@ -60,6 +69,14 @@ export async function handleInteraction(
 
     if (interaction.isModalSubmit() && readEventModalTarget(interaction.customId) !== null) {
       await handleEventModalSubmit(context, interaction);
+      return;
+    }
+
+    if (
+      interaction.isModalSubmit() &&
+      readMessageIdFromPlusOneSettingsModalId(interaction.customId) !== null
+    ) {
+      await handlePlusOneSettingsSubmit(context, interaction);
     }
   } catch (error: unknown) {
     // The handlers reply on their own failures; this only catches what escapes

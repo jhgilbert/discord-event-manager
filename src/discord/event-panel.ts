@@ -7,6 +7,8 @@ import {
 } from 'discord.js';
 import { RSVP_BUTTON_IDS } from './custom-ids.js';
 import { summarizeCapacity } from '../domain/capacity.js';
+import { arePlusOnesOpen, readPlusOnePolicy } from '../domain/plus-one-policy.js';
+import { describePlusOnePolicyLine } from './plus-one-copy.js';
 import type { EventRow, RsvpRow } from '../domain/types.js';
 
 /** Discord's hard caps. Exceeding either is a 400, not a truncation. */
@@ -90,7 +92,23 @@ function computeGoingFieldBudget(spentOnEverythingElse: number): number {
   return Math.max(0, Math.min(FIELD_VALUE_MAX, remainingTotalBudget));
 }
 
-function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow[]): EmbedBuilder {
+/**
+ * The footer sits directly above the buttons, which makes it the place to say
+ * why the +1 button is greyed out — next to the thing it explains.
+ */
+function buildFooterText(event: EventRow, now: number, timeZone: string): string {
+  return event.cancelled
+    ? 'This event was canceled.'
+    : describePlusOnePolicyLine(readPlusOnePolicy(event), now, timeZone);
+}
+
+function buildPanelEmbed(
+  event: EventRow,
+  confirmed: RsvpRow[],
+  waiting: RsvpRow[],
+  now: number,
+  timeZone: string,
+): EmbedBuilder {
   const { isFull } = summarizeCapacity(event, confirmed);
   const description = event.description ?? '';
   const spotsValue = describeSpots(event, confirmed);
@@ -141,7 +159,7 @@ function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow
     .setTitle(event.cancelled ? `❌ ${event.title} (canceled)` : event.title)
     .setColor(event.cancelled ? COLOUR_CANCELLED : isFull ? COLOUR_FULL : COLOUR_OPEN)
     .addFields(fields)
-    .setFooter({ text: event.cancelled ? 'This event was canceled.' : 'RSVP with the buttons below.' });
+    .setFooter({ text: buildFooterText(event, now, timeZone) });
 
   return description === '' ? embed : embed.setDescription(description);
 }
@@ -151,9 +169,14 @@ function buildPanelEmbed(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow
  * "you're on the waitlist at #4". Disabling them would be cosmetic anyway: a
  * stale client still shows them enabled, so the server-side check is required
  * either way. Cancellation is different, and really does disable them.
+ *
+ * Closed +1s disable the +1 button for the same reason: they are a rule, not a
+ * state that changes with every click. The click handler enforces the rule
+ * regardless, since a stale client can still send the click.
  */
-function buildRsvpButtons(event: EventRow): ActionRowBuilder<ButtonBuilder> {
+function buildRsvpButtons(event: EventRow, now: number): ActionRowBuilder<ButtonBuilder> {
   const disabled = Boolean(event.cancelled);
+  const plusOneDisabled = disabled || !arePlusOnesOpen(readPlusOnePolicy(event), now);
 
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -165,7 +188,7 @@ function buildRsvpButtons(event: EventRow): ActionRowBuilder<ButtonBuilder> {
       .setCustomId(RSVP_BUTTON_IDS.goingPlusOne)
       .setLabel('RSVP +1')
       .setStyle(ButtonStyle.Success)
-      .setDisabled(disabled),
+      .setDisabled(plusOneDisabled),
     new ButtonBuilder()
       .setCustomId(RSVP_BUTTON_IDS.withdraw)
       .setLabel('Cancel RSVP')
@@ -174,9 +197,20 @@ function buildRsvpButtons(event: EventRow): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
-export function renderEventPanel(event: EventRow, confirmed: RsvpRow[], waiting: RsvpRow[]) {
+/**
+ * `timeZone` is for the +1 date in the footer, which is plain text and so has
+ * to be written in one fixed zone — the same trade the thread name makes.
+ */
+export function renderEventPanel(
+  event: EventRow,
+  confirmed: RsvpRow[],
+  waiting: RsvpRow[],
+  timeZone: string,
+) {
+  const now = Math.floor(Date.now() / 1000);
+
   return {
-    embeds: [buildPanelEmbed(event, confirmed, waiting)],
-    components: [buildRsvpButtons(event)],
+    embeds: [buildPanelEmbed(event, confirmed, waiting, now, timeZone)],
+    components: [buildRsvpButtons(event, now)],
   };
 }

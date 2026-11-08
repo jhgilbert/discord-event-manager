@@ -9,6 +9,8 @@ export type RsvpDecision =
   | { kind: 'waitlist'; plusOne: boolean }
   /** Their existing confirmed RSVP is left exactly as it was. */
   | { kind: 'reject-upgrade'; reason: 'no-room' | 'waitlist-ahead' }
+  /** +1s are closed and they asked for a guest they don't already have. Nothing is written. */
+  | { kind: 'reject-plus-one' }
   /** They clicked the button matching what they already have. */
   | { kind: 'no-change' };
 
@@ -17,6 +19,7 @@ export interface RsvpDecisionInput {
   requestedPlusOne: boolean;
   remaining: number;
   waitlistIsEmpty: boolean;
+  plusOnesOpen: boolean;
 }
 
 /**
@@ -77,7 +80,23 @@ function decideForConfirmedMember(input: RsvpDecisionInput, existing: RsvpRow): 
   };
 }
 
+/**
+ * Only *adding* a guest is gated. Someone who already has one keeps them while
+ * +1s are closed — clicking "RSVP +1" again is a no-change, not a refusal — so
+ * a host closing +1s never takes away a guest somebody was promised.
+ *
+ * A newcomer asking for a guest is refused outright rather than seated solo,
+ * for the same reason an upgrade is: they would turn up with a person.
+ */
+function wouldAddAGuestWhileClosed(input: RsvpDecisionInput): boolean {
+  return input.requestedPlusOne && !input.plusOnesOpen && !input.existing?.plus_one;
+}
+
 export function decideRsvpOutcome(input: RsvpDecisionInput): RsvpDecision {
+  if (wouldAddAGuestWhileClosed(input)) {
+    return { kind: 'reject-plus-one' };
+  }
+
   if (input.existing === null) {
     return decideForNewcomer(input);
   }

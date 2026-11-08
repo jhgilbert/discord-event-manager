@@ -73,7 +73,7 @@ async function writeEventPanel(context: AppContext, messageId: string): Promise<
     return;
   }
 
-  await starterMessage.edit(renderEventPanel(event, confirmed, waiting));
+  await starterMessage.edit(renderEventPanel(event, confirmed, waiting, context.environment.TZ));
 
   const { isFull } = summarizeCapacity(event, confirmed);
   await applyStateTag(

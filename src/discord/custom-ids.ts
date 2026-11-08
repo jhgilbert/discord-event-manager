@@ -88,3 +88,36 @@ export const EVENT_MODAL_FIELD_IDS = {
   location: 'location',
   capacity: 'capacity',
 } as const;
+
+const PLUS_ONE_SETTINGS_BUTTON_PREFIX = `event:${CUSTOM_ID_VERSION}:plus-ones:`;
+const PLUS_ONE_SETTINGS_MODAL_PREFIX = `event:${CUSTOM_ID_VERSION}:plus-ones-form:`;
+
+/**
+ * The event ID travels in the button because it is shown on the ephemeral
+ * reply to create and edit — after create there is no event channel to read it
+ * from, since the reply lives in the builder channel.
+ */
+export function buildPlusOneSettingsButtonId(messageId: string): string {
+  return `${PLUS_ONE_SETTINGS_BUTTON_PREFIX}${messageId}`;
+}
+
+export function readMessageIdFromPlusOneSettingsButtonId(customId: string): string | null {
+  return customId.startsWith(PLUS_ONE_SETTINGS_BUTTON_PREFIX)
+    ? customId.slice(PLUS_ONE_SETTINGS_BUTTON_PREFIX.length)
+    : null;
+}
+
+export function buildPlusOneSettingsModalId(messageId: string): string {
+  return `${PLUS_ONE_SETTINGS_MODAL_PREFIX}${messageId}`;
+}
+
+export function readMessageIdFromPlusOneSettingsModalId(customId: string): string | null {
+  return customId.startsWith(PLUS_ONE_SETTINGS_MODAL_PREFIX)
+    ? customId.slice(PLUS_ONE_SETTINGS_MODAL_PREFIX.length)
+    : null;
+}
+
+export const PLUS_ONE_MODAL_FIELD_IDS = {
+  choice: 'plus-one-choice',
+  allowedFrom: 'plus-one-allowed-from',
+} as const;

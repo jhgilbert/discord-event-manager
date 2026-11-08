@@ -267,8 +267,10 @@ worker: it makes an outbound gateway connection and listens on nothing.
    automatically, and take a spot like anyone else.
 4. Click **RSVP** from a second account — the roster and spot count update.
 
-Set capacity to 2 on a test event and click **RSVP +1** from that second
-account to watch the waitlist behave: one spot is yours, so a member bringing a
+**RSVP +1** starts greyed out — tap **+1 settings** on the reply you got when
+creating the event, and choose *Allowed on or after a date* with the date left
+blank. Then set capacity to 2 on a test event and click **RSVP +1** from that
+second account to watch the waitlist behave: one spot is yours, so a member bringing a
 guest needs two and waits for them.
 
 ---
@@ -282,6 +284,7 @@ guest needs two and waits for them.
 | Cancel an event | `/event cancel`, run **inside that event's post** |
 | Delete an event | `/event delete`, run **inside that event's post** — admins only |
 | RSVP | The buttons on the event post |
+| Allow +1s | **+1 settings** on the reply to create, or to `/event edit` |
 | Drop out as host | **Cancel RSVP** on your own post — the event stays up, your spot is freed |
 
 `edit` and `cancel` are run inside the event's own thread because that is how

@@ -17,7 +17,13 @@ CREATE TABLE IF NOT EXISTS events (
   capacity      INTEGER NOT NULL,
   cancelled     INTEGER NOT NULL DEFAULT 0,
   reminder_sent INTEGER NOT NULL DEFAULT 0,
-  created_at    INTEGER NOT NULL DEFAULT 0   -- unix seconds; 0 means "unknown"
+  created_at    INTEGER NOT NULL DEFAULT 0,  -- unix seconds; 0 means "unknown"
+  -- unix seconds; NULL = +1s not allowed, 0 = allowed from the start. The
+  -- default is "allowed" so events from before the column existed keep working
+  -- as they did; new events always write it explicitly. See plus-one-policy.ts.
+  plus_ones_allowed_from  INTEGER DEFAULT 0,
+  -- 1 while the panel still shows a +1 button that a future date will unlock.
+  plus_one_unlock_pending INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS rsvps (
@@ -38,4 +44,14 @@ CREATE INDEX IF NOT EXISTS rsvps_by_event_order
 -- full events table.
 CREATE INDEX IF NOT EXISTS events_pending_reminders
   ON events (reminder_sent, starts_at);
+`;
+
+/**
+ * Indexes on columns that older databases only gain from `addColumnIfMissing`,
+ * so they have to run after it rather than with the statements above.
+ */
+export const POST_MIGRATION_STATEMENTS = `
+-- The +1 unlock sweep runs once a minute too, and almost never finds anything.
+CREATE INDEX IF NOT EXISTS events_pending_plus_one_unlocks
+  ON events (plus_one_unlock_pending, plus_ones_allowed_from);
 `;

@@ -9,13 +9,18 @@ export type NewEvent = EventDetails & {
   hostId: string;
 };
 
+/**
+ * `plus_ones_allowed_from` is written as NULL ("not allowed") rather than left to
+ * the column default, which says "allowed" for the sake of events that predate
+ * the setting.
+ */
 function insertEvent(database: EventDatabase, event: NewEvent): void {
   database
     .prepare(
       `INSERT INTO events
-         (message_id, thread_id, guild_id, host_id, title, description, location, starts_at, capacity, created_at)
+         (message_id, thread_id, guild_id, host_id, title, description, location, starts_at, capacity, created_at, plus_ones_allowed_from)
        VALUES
-         (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity, @createdAt)`,
+         (@messageId, @threadId, @guildId, @hostId, @title, @description, @location, @startsAt, @capacity, @createdAt, NULL)`,
     )
     .run({ ...event, createdAt: Math.floor(Date.now() / 1000) });
 }
@@ -120,4 +125,41 @@ export function findEventsDueForReminder(
         ORDER BY starts_at ASC`,
     )
     .all(windowEndsAt) as EventRow[];
+}
+
+/**
+ * `unlockPending` is set when the date is still ahead, so the sweep knows to
+ * re-render the panel once it passes — nothing else would, on a quiet event.
+ */
+export function updatePlusOnePolicy(
+  database: EventDatabase,
+  messageId: string,
+  allowedFrom: number | null,
+  unlockPending: boolean,
+): void {
+  database
+    .prepare(
+      `UPDATE events
+          SET plus_ones_allowed_from = ?,
+              plus_one_unlock_pending = ?
+        WHERE message_id = ?`,
+    )
+    .run(allowedFrom, unlockPending ? 1 : 0, messageId);
+}
+
+export function findEventsDueForPlusOneUnlock(database: EventDatabase, now: number): EventRow[] {
+  return database
+    .prepare(
+      `SELECT * FROM events
+        WHERE plus_one_unlock_pending = 1
+          AND plus_ones_allowed_from <= ?
+          AND cancelled = 0`,
+    )
+    .all(now) as EventRow[];
+}
+
+export function clearPlusOneUnlockPending(database: EventDatabase, messageId: string): void {
+  database
+    .prepare('UPDATE events SET plus_one_unlock_pending = 0 WHERE message_id = ?')
+    .run(messageId);
 }

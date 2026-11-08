@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
-import { SCHEMA_STATEMENTS } from './schema.js';
+import { POST_MIGRATION_STATEMENTS, SCHEMA_STATEMENTS } from './schema.js';
 import { logger } from '../lib/logger.js';
 
 export type EventDatabase = Database.Database;
@@ -56,6 +56,9 @@ export function openDatabase(databasePath: string): EventDatabase {
   applyDurabilityPragmas(database);
   database.exec(SCHEMA_STATEMENTS);
   addColumnIfMissing(database, 'events', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(database, 'events', 'plus_ones_allowed_from', 'INTEGER DEFAULT 0');
+  addColumnIfMissing(database, 'events', 'plus_one_unlock_pending', 'INTEGER NOT NULL DEFAULT 0');
+  database.exec(POST_MIGRATION_STATEMENTS);
 
   logger.info('database ready', { databasePath });
   return database;

@@ -21,6 +21,9 @@ export interface EventRow {
   cancelled: number;
   reminder_sent: number;
   created_at: number;
+  /** See domain/plus-one-policy.ts — read through `readPlusOnePolicy`. */
+  plus_ones_allowed_from: number | null;
+  plus_one_unlock_pending: number;
 }
 
 export interface RsvpRow {

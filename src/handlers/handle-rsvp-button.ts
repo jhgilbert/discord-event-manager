@@ -11,10 +11,12 @@ import {
   updateRsvpPlusOne,
 } from '../db/rsvp-queries.js';
 import { summarizeCapacity } from '../domain/capacity.js';
+import { arePlusOnesOpen, readPlusOnePolicy, type PlusOnePolicy } from '../domain/plus-one-policy.js';
 import { reconcileEvent } from '../domain/reconcile.js';
 import { decideRsvpOutcome, type RsvpDecision } from '../domain/rsvp-decision.js';
 import { readRsvpButtonAction, type RsvpButtonAction } from '../discord/custom-ids.js';
 import { announcePromotedFromWaitlist } from '../discord/announcements.js';
+import { describeWhyPlusOnesAreClosed } from '../discord/plus-one-copy.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { withMessageLock } from '../lib/message-lock.js';
 import { describeError, logger } from '../lib/logger.js';
@@ -45,6 +47,7 @@ function describeFinalRsvpState(
   database: EventDatabase,
   messageId: string,
   userId: string,
+  plusOnesOpen: boolean,
 ): string {
   const rsvp = findRsvp(database, messageId, userId);
 
@@ -65,11 +68,25 @@ function describeFinalRsvpState(
   }
 
   // Strict FIFO means a queued +1 can sit behind a single free seat. Say so, so
-  // they know dropping the guest is a choice they can make rather than a bug.
+  // they know dropping the guest is a choice they can make rather than a bug —
+  // and, while +1s are closed, that it is a choice they cannot undo.
   return [
     `This event is full — you and your guest are on the waitlist at **#${position}**.`,
     'Single spots tend to open sooner: tap **RSVP** to drop the +1 and take the next one.',
+    ...(plusOnesOpen ? [] : ["+1s are closed right now, so you couldn't add your guest back."]),
   ].join('\n');
+}
+
+function describeRejectedPlusOne(
+  policy: PlusOnePolicy,
+  hasExistingRsvp: boolean,
+  timeZone: string,
+): string {
+  const reason = describeWhyPlusOnesAreClosed(policy, timeZone);
+
+  return hasExistingRsvp
+    ? `${reason} **Your own RSVP is unchanged.**`
+    : `${reason} You haven't been RSVPed — tap **RSVP** to come on your own.`;
 }
 
 function describeRejectedUpgrade(reason: 'no-room' | 'waitlist-ahead', remaining: number): string {
@@ -87,7 +104,11 @@ function applyDecisionToDatabase(
   userId: string,
   decision: RsvpDecision,
 ): void {
-  if (decision.kind === 'no-change' || decision.kind === 'reject-upgrade') {
+  if (
+    decision.kind === 'no-change' ||
+    decision.kind === 'reject-upgrade' ||
+    decision.kind === 'reject-plus-one'
+  ) {
     return;
   }
 
@@ -119,13 +140,28 @@ function handleGoingClick(
 
   const confirmed = listConfirmedInJoinOrder(database, messageId);
   const { remaining } = summarizeCapacity(event, confirmed);
+  const existing = findRsvp(database, messageId, userId);
+  const plusOnePolicy = readPlusOnePolicy(event);
+  const plusOnesOpen = arePlusOnesOpen(plusOnePolicy, Math.floor(Date.now() / 1000));
 
   const decision = decideRsvpOutcome({
-    existing: findRsvp(database, messageId, userId),
+    existing,
     requestedPlusOne,
     remaining,
     waitlistIsEmpty: listWaitlistInJoinOrder(database, messageId).length === 0,
+    plusOnesOpen,
   });
+
+  if (decision.kind === 'reject-plus-one') {
+    return {
+      ephemeralMessage: describeRejectedPlusOne(
+        plusOnePolicy,
+        existing !== null,
+        context.environment.TZ,
+      ),
+      promotedUserIds: [],
+    };
+  }
 
   if (decision.kind === 'reject-upgrade') {
     return {
@@ -138,7 +174,7 @@ function handleGoingClick(
   const promotedUserIds = reconcileEvent(database, messageId);
 
   return {
-    ephemeralMessage: describeFinalRsvpState(database, messageId, userId),
+    ephemeralMessage: describeFinalRsvpState(database, messageId, userId, plusOnesOpen),
     promotedUserIds,
   };
 }

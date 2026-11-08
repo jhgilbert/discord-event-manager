@@ -23,6 +23,10 @@ this file covers how the code is arranged.
   the event is created. They can still withdraw with *Cancel RSVP*. The
   first reply in the thread pings the host with how to edit or cancel.
 - **RSVP** — three buttons: *RSVP*, *RSVP +1*, *Cancel RSVP*.
+- **+1s** — off by default. The host turns them on, now or from a date, with
+  the **+1 settings** button on the reply to create or edit. Until then *RSVP
+  +1* is greyed out and the line above the buttons says why. Turning +1s off
+  later only stops new ones: a guest already on the list is never removed.
 - **Capacity** — one number, total headcount. A guest takes a seat exactly as a
   member does, and so does the host.
 - **Waitlist** — strict FIFO, promoted automatically when room appears, with an
@@ -65,6 +69,7 @@ src/
     reconcile.ts       the promotion loop
     event-form.ts      Zod + chrono over the five modal fields
     event-changes.ts   what an edit changed, and whether to ping about it
+    plus-one-policy.ts whether guests are allowed, and from when
   discord/             rendering and API calls
     custom-ids.ts      versioned button and modal IDs
     event-modal.ts     the create/edit form
@@ -74,13 +79,16 @@ src/
     forum-tags.ts      Open / Full / Canceled
     announcements.ts   in-thread pings
     event-edit-notice.ts   the "what changed" message
+    plus-one-settings-modal.ts  the +1 settings button and form
+    plus-one-copy.ts   how the +1 rule is worded
     event-permissions.ts   who may edit or cancel
     event-builder-panel.ts  the pinned "New event" message
     channels.ts        startup channel resolution
   handlers/            one file per interaction, plus a router
   commands/            slash command definition and registration
   jobs/
-    reminder-job.ts    the once-a-minute sweep
+    reminder-job.ts    the once-a-minute reminder sweep
+    plus-one-unlock-job.ts  re-renders a panel when its +1 date arrives
 ```
 
 The dependency direction is one-way: `domain/` imports nothing from `discord/`.
@@ -113,6 +121,12 @@ and reconcile seats them.
 path that produces an event whose host is missing from its own roster. It is
 also the one confirmed seat reconcile did not grant, which is harmless:
 reconcile only ever adds people, and it recounts the roster every time.
+
+**The +1 rule gates adding a guest, nothing else.** `plus_ones_allowed_from` is
+NULL for "not allowed", 0 for "allowed", or the midnight (in `TZ`) it opens.
+Events from before the column existed read as 0, so a deploy never greys out
+a button people were already using. Nothing re-renders a quiet event when its
+date arrives, which is what `plus-one-unlock-job.ts` is for.
 
 **State lives in SQLite, never in the rendered message.** The panel is always
 rebuilt from rows. Nothing is ever scraped back out of an embed.

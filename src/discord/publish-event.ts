@@ -32,6 +32,9 @@ function buildUnpublishedEventRow(
     // Rendering never reads this; the row that gets stored is stamped by
     // insertEvent, so the two cannot drift.
     created_at: 0,
+    // Matches what insertEvent stores: a new event starts with +1s off.
+    plus_ones_allowed_from: null,
+    plus_one_unlock_pending: 0,
   };
 }
 
@@ -81,7 +84,7 @@ export async function publishNewEvent(
     // an event without the handler having to unarchive on every click.
     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
     appliedTags: stateTagId === null ? [] : [stateTagId],
-    message: renderEventPanel(event, [hostRsvp], []),
+    message: renderEventPanel(event, [hostRsvp], [], context.environment.TZ),
   });
 
   // For forum posts the starter message ID equals the thread ID, which is why

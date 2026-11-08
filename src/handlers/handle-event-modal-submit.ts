@@ -28,6 +28,7 @@ import {
 import { readEventFormFromModal } from '../discord/event-modal.js';
 import { isHostOrServerManager } from '../discord/event-permissions.js';
 import { buildEventThreadName } from '../discord/event-thread-name.js';
+import { buildPlusOneSettingsButton } from '../discord/plus-one-settings-modal.js';
 import { publishNewEvent } from '../discord/publish-event.js';
 import { refreshEventPanel } from '../discord/refresh-event-panel.js';
 import { buildEventEditNotice } from '../discord/event-edit-notice.js';
@@ -91,14 +92,17 @@ async function createEventFromForm(
     capacity: details.capacity,
   });
 
-  // Said out loud because it costs the host a seat: they should find out here
-  // rather than by counting the roster and wondering who the extra person is.
+  // The host's seat is said out loud because it costs them a spot: they should
+  // find out here rather than by counting the roster. +1s are said out loud
+  // because they start off, and the settings live behind a button rather than
+  // in the form — this reply is where a host learns either exists.
   await interaction.editReply({
     content: [
       `Posted: ${published.thread.url}`,
       "You're on the list as the host, taking one of the spots. Tap **Cancel RSVP** on the post if you need to give it up.",
+      '+1s are off for now. Tap **+1 settings** to let attendees bring a guest.',
     ].join('\n'),
-    components: [],
+    components: [buildPlusOneSettingsButton(published.messageId)],
   });
 
   // After the reply, so a slow send never holds up the host's confirmation.
@@ -183,6 +187,7 @@ interface EditNotice {
 interface EditOutcome {
   message: string;
   promotedUserIds: string[];
+  /** Null when the edit was refused, which also hides the +1 settings button. */
   threadId: string | null;
   notice: EditNotice | null;
 }
@@ -280,7 +285,13 @@ async function applyEventEdit(
     };
   });
 
-  await interaction.editReply({ content: outcome.message, components: [] });
+  // Offered after every accepted edit, "Nothing changed" included: a host who
+  // opened the form only to find the +1 setting closes it unchanged and lands
+  // here, one click from what they were looking for.
+  await interaction.editReply({
+    content: outcome.message,
+    components: outcome.threadId === null ? [] : [buildPlusOneSettingsButton(messageId)],
+  });
 
   if (outcome.threadId === null) {
     return;

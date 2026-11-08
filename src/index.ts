@@ -13,6 +13,7 @@ import { fetchForumChannel, fetchTextChannel } from './discord/channels.js';
 import { warnAboutMissingStateTags } from './discord/forum-tags.js';
 import { ensureNewEventPanelExists } from './discord/event-builder-panel.js';
 import { handleInteraction } from './handlers/handle-interaction.js';
+import { startPlusOneUnlockJob } from './jobs/plus-one-unlock-job.js';
 import { startReminderJob } from './jobs/reminder-job.js';
 import type { AppContext } from './context.js';
 import { describeError, logFatal, logger } from './lib/logger.js';
@@ -105,7 +106,7 @@ async function startBot(): Promise<void> {
   const database = openDatabase(environment.DATABASE_PATH);
   const client = createDiscordClient();
 
-  let stopReminderJob: (() => void) | null = null;
+  const stopJobs: Array<() => void> = [];
 
   const readyTimeout = setTimeout(() => {
     logFatal('gave up waiting for the Discord gateway', {
@@ -133,7 +134,7 @@ async function startBot(): Promise<void> {
           void handleInteraction(context, interaction);
         });
 
-        stopReminderJob = startReminderJob(context);
+        stopJobs.push(startReminderJob(context), startPlusOneUnlockJob(context));
 
         logger.info('bot ready', {
           user: readyClient.user.tag,
@@ -155,7 +156,7 @@ async function startBot(): Promise<void> {
 
   const shutDown = (signal: string) => {
     logger.info('shutting down', { signal });
-    stopReminderJob?.();
+    stopJobs.forEach((stop) => stop());
     void client.destroy().finally(() => {
       // Closing the handle checkpoints the WAL, so the volume holds a complete
       // database rather than a database plus a journal to replay.
