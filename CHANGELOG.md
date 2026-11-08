@@ -4,7 +4,7 @@ Notable changes to the bot, newest first. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-11-08
 
 ### Added
 
@@ -30,6 +30,18 @@ Notable changes to the bot, newest first. The format follows
   starts the bot with `node` directly instead of through `npm start`, so the
   stop signal reaches the bot and it shuts down cleanly, closing the database
   properly on the way out.
+
+### Upgrade notes
+
+- Run `/event reload` once in each open event's post after deploying. That
+  adds everyone already on the list to the thread; new RSVPs join it on their
+  own.
+- Existing posts pick up the full-size +1 line the next time they are redrawn
+  (any click, or `/event reload`).
+- Host instructions mentioning `/event plus-ones` appear only in threads for
+  events created after the deploy.
+- This deploy may still show the old container as "crashed" once, since that
+  container was started the old way. Later deploys should not.
 
 ## [1.1.0] - 2026-11-08
 
@@ -80,5 +92,6 @@ Notable changes to the bot, newest first. The format follows
 First release: events posted to a forum with RSVP buttons, capacity, a
 waitlist, +1s, reminders, and `/event edit`, `cancel` and `delete`.
 
+[1.2.0]: https://github.com/jhgilbert/discord-event-manager/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jhgilbert/discord-event-manager/compare/c8137b5...v1.1.0
 [1.0.0]: https://github.com/jhgilbert/discord-event-manager/commits/c8137b5
