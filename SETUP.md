@@ -168,9 +168,12 @@ gh repo create discord-event-manager --private --source=. --push
 ### 2.2 Create the service
 
 1. <https://railway.app> → **New Project** → **Deploy from GitHub repo**.
-2. Pick the repository. Railway detects Node from `package.json` and reads
-   `railway.json` for the build and start commands, so there is nothing to
-   configure here.
+2. Pick the repository. Railway detects Node from `package.json`.
+3. Once the volume exists (2.3), apply the service settings from the repo:
+   `npm install`, `railway link` to this project, then `railway config plan`
+   to preview and `railway config apply`. `.railway/railway.ts` holds the build
+   and start commands, the restart policy, the single replica and the `/data`
+   mount, so there is nothing to set by hand in the dashboard.
 
 Let the first deploy fail. It has no environment variables yet, and the bot
 exits immediately with a message naming what is missing. That is by design —
@@ -195,8 +198,8 @@ Two consequences worth knowing:
   before the new one starts. Expect a few seconds of downtime per deploy. This
   is correct for SQLite, which allows exactly one writer.
 - **Do not scale past one replica.** Two containers cannot share one volume, and
-  a second gateway connection would double-handle every click. `railway.json`
-  pins `numReplicas` to 1.
+  a second gateway connection would double-handle every click. `.railway/railway.ts`
+  pins the replica count to 1.
 
 ### 2.4 Set the variables
 
@@ -370,7 +373,7 @@ confirmation first and names what will be lost.
 phase. Nixpacks already installs dependencies in its own earlier phase, and it
 mounts a build cache at `node_modules/.cache`; `npm ci` starts by deleting
 `node_modules` wholesale, and it cannot delete a live mount point. The build
-command in `railway.json` is therefore `npm run build` alone — no install step.
+command in `.railway/railway.ts` is therefore `npm run build` alone — no install step.
 If you add one back, use `npm install`, which updates in place rather than
 wiping the directory first.
 

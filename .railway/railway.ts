@@ -17,7 +17,9 @@ export default defineRailway(() => {
     // One replica only: two bots would answer every click twice and fight over
     // the same database file.
     replicas: { "sfo": 1 },
-    deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 10 },
+    // No restart policy: Railway's default (on failure, up to 10 times) is what
+    // this bot wants, and Railway stores it as unset, so declaring it here only
+    // shows up as a change on every plan.
     volumeMounts: { "/data": database },
   });
 
