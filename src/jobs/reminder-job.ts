@@ -5,12 +5,23 @@ import { announceEventReminder } from '../discord/announcements.js';
 import { isReservedSeat } from '../domain/reserved-seats.js';
 import { describeError, logger } from '../lib/logger.js';
 
+const QUARTER_HOUR_MS = 15 * 60 * 1000;
+
 /**
- * A reminder posted up to 15 minutes late is invisible at a lead measured in
- * hours (the default is a day). A lead shorter than about an hour would want
- * this tightened.
+ * A few seconds past the quarter hour, so a clock running slightly fast cannot
+ * sweep just before an event's reminder point and post it 15 minutes late.
  */
-const SWEEP_INTERVAL_MS = 15 * 60 * 1000;
+const PAST_THE_QUARTER_MS = 5 * 1000;
+
+/**
+ * On the quarter hour rather than every 15 minutes from boot, because events
+ * start on the hour or half hour, and so do their reminder points. Counted from
+ * boot, a 6 pm reminder could go out at 6:14. (Every timezone offset in use is
+ * a whole number of quarter hours, so this lines up with local time too.)
+ */
+function msUntilNextSweep(nowMs: number): number {
+  return QUARTER_HOUR_MS - (nowMs % QUARTER_HOUR_MS) + PAST_THE_QUARTER_MS;
+}
 
 /**
  * An event posted for tonight, with the reminder set to the day before, was
@@ -82,8 +93,18 @@ export function startReminderJob(context: AppContext): () => void {
     });
   };
 
-  sweep();
-  const timer = setInterval(sweep, SWEEP_INTERVAL_MS);
+  // Rescheduled after each sweep rather than with setInterval, which drifts
+  // off the quarter hour over weeks of uptime.
+  let timer: NodeJS.Timeout;
+  const scheduleNext = () => {
+    timer = setTimeout(() => {
+      sweep();
+      scheduleNext();
+    }, msUntilNextSweep(Date.now()));
+  };
 
-  return () => clearInterval(timer);
+  sweep();
+  scheduleNext();
+
+  return () => clearTimeout(timer);
 }

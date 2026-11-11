@@ -11,6 +11,10 @@ Notable changes to the bot, newest first. The format follows
 - **Past events close just after midnight.** The daily check now runs at
   12:00 am instead of 24 hours after the bot last started, so a finished event
   no longer stays open until whatever time of day the last deploy happened.
+- **Reminders go out on time.** The check now runs on the quarter hour (6:00,
+  6:15, 6:30, …) instead of every 15 minutes from when the bot last started,
+  so the reminder for a 6 pm event arrives right at its time rather than up
+  to 14 minutes late.
 
 ## [1.3.0] - 2026-11-08
 
