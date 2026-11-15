@@ -6,7 +6,9 @@ Notable changes to the bot, newest first. The format follows
 
 ## [Unreleased]
 
-### Changed
+## [1.3.1] - 2026-11-15
+
+### Fixed
 
 - **Past events close just after midnight.** The daily check now runs at
   12:00 am instead of 24 hours after the bot last started, so a finished event
@@ -138,7 +140,8 @@ Notable changes to the bot, newest first. The format follows
 First release: events posted to a forum with RSVP buttons, capacity, a
 waitlist, +1s, reminders, and `/event edit`, `cancel` and `delete`.
 
-[Unreleased]: https://github.com/jhgilbert/discord-event-manager/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/jhgilbert/discord-event-manager/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/jhgilbert/discord-event-manager/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/jhgilbert/discord-event-manager/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/jhgilbert/discord-event-manager/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jhgilbert/discord-event-manager/compare/c8137b5...v1.1.0
